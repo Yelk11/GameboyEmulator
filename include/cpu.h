@@ -6,7 +6,7 @@
 
 #include "mmu.h"
 
-typedef struct {
+typedef struct CPU {
     // AF Register Pair
     union {
         struct {
@@ -14,7 +14,7 @@ typedef struct {
             uint8_t a; // Accumulator (upper byte on little-endian)
         };
         uint16_t af;
-    };
+    }AF_reg;
 
     // BC Register Pair
     union {
@@ -23,7 +23,7 @@ typedef struct {
             uint8_t b;
         };
         uint16_t bc;
-    };
+    }BC_reg;
 
     // DE Register Pair
     union {
@@ -32,7 +32,7 @@ typedef struct {
             uint8_t d;
         };
         uint16_t de;
-    };
+    }DE_reg;
 
     // HL Register Pair
     union {
@@ -41,14 +41,18 @@ typedef struct {
             uint8_t h;
         };
         uint16_t hl;
-    };
+    }HL_reg;
 
     uint16_t sp; // Stack Pointer
     uint16_t pc; // Program Counter
-} reg;
+    uint32_t cycles;
+} CPU;
 
-typedef void (*cpu_opcode_handler)(reg *cpu, MMU *mmu);
+typedef CPU reg;
 
-bool cpu_execute_opcode(reg *cpu, MMU *mmu, uint8_t opcode);
+typedef void (*cpu_opcode_handler)(CPU *cpu, MMU *mmu, uint8_t opcode);
+
+bool cpu_execute_opcode(CPU *cpu, MMU *mmu, uint8_t opcode);
+bool cpu_step(CPU *cpu, MMU *mmu);
 
 #endif
