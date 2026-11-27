@@ -40,6 +40,11 @@ typedef struct Cartridge {
 typedef struct {
     uint8_t memory[BUFFER_SIZE]; // Full 64KB address space (0x0000 - 0xFFFF)
     Cartridge cartridge;
+    uint8_t dma_source;
+    bool dma_active;
+    uint16_t dma_remaining;
+    uint8_t action_buttons;
+    uint8_t dpad_buttons;
 } MMU;
 
 MMU *mmu_init(void);

@@ -9,6 +9,8 @@ MMU *mmu_init(void)
         return NULL;
     }
     mmu->cartridge.rom_bank = 1u;
+    mmu->action_buttons = 0x0Fu;
+    mmu->dpad_buttons = 0x0Fu;
     return mmu;
 }
 
@@ -247,6 +249,15 @@ uint8_t mmu_read_byte(MMU *mmu, uint16_t addr)
 {
     if (mmu == NULL) return 0xFFu;
     if (mmu->cartridge.rom == NULL) {
+        if (addr == 0xFF00u) {
+            uint8_t select = mmu->memory[0xFF00u] & 0x30u;
+            uint8_t result = 0xC0u | select;
+            if (select == 0x20u) result |= mmu->action_buttons;
+            else if (select == 0x10u) result |= mmu->dpad_buttons;
+            else if (select == 0x30u) result |= mmu->action_buttons & mmu->dpad_buttons;
+            else result |= 0x0Fu;
+            return result;
+        }
         if (addr >= 0xE000u && addr < 0xFE00u) {
             return mmu->memory[addr - 0x2000u];
         }
@@ -264,7 +275,37 @@ void mmu_write_byte(MMU *mmu, uint16_t addr, uint8_t val)
     Cartridge *cart;
     if (mmu == NULL) return;
     cart = &mmu->cartridge;
+    if (addr == 0xFF00u) {
+        mmu->memory[addr] = val & 0x30u;
+        return;
+    }
+    if (addr == 0xFF04u) {
+        mmu->memory[addr] = 0u;
+        return;
+    }
+    if (addr == 0xFF46u) {
+        mmu->dma_source = val;
+        mmu->dma_active = true;
+        mmu->dma_remaining = 160u;
+        mmu->memory[addr] = val;
+        return;
+    }
     if (cart->rom == NULL) {
+        if (addr == 0xFF04u) {
+            mmu->memory[addr] = 0u;
+            return;
+        }
+        if (addr == 0xFF46u) {
+            mmu->dma_source = val;
+            mmu->dma_active = true;
+            mmu->dma_remaining = 160u;
+            mmu->memory[addr] = val;
+            return;
+        }
+        if (addr == 0xFF00u) {
+            mmu->memory[addr] = val & 0x30u;
+            return;
+        }
         if (addr >= 0xE000u && addr < 0xFE00u) {
             mmu->memory[addr - 0x2000u] = val;
             return;

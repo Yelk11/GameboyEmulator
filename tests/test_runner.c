@@ -19,6 +19,11 @@ void test_cpu_add_and_flags(void);
 void test_cpu_conditional_jr(void);
 void test_cpu_call_and_return(void);
 void test_cpu_cb_rotate(void);
+void test_phase5_timer_overflow(void);
+void test_phase5_joypad_interrupt(void);
+void test_phase5_dma_transfer(void);
+void test_phase5_interrupt_step(void);
+void test_phase5_serial_transfer(void);
 
 void setUp(void)
 {
@@ -50,5 +55,10 @@ int main(void)
     RUN_TEST(test_cpu_conditional_jr);
     RUN_TEST(test_cpu_call_and_return);
     RUN_TEST(test_cpu_cb_rotate);
+    RUN_TEST(test_phase5_timer_overflow);
+    RUN_TEST(test_phase5_joypad_interrupt);
+    RUN_TEST(test_phase5_dma_transfer);
+    RUN_TEST(test_phase5_interrupt_step);
+    RUN_TEST(test_phase5_serial_transfer);
     return UNITY_END();
 }

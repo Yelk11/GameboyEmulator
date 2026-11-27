@@ -189,6 +189,8 @@ The project is complete when all of the following are true:
 
 ### Phase 5: Implement Timers, Interrupts, DMA, and Joypad
 
+**Status:** Complete
+
 **Goal:** Complete the hardware events that coordinate CPU execution.
 
 1. Implement the interrupt controller.
