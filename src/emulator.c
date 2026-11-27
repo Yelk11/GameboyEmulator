@@ -94,6 +94,9 @@ void gb_destroy(GB *gb)
         return;
     }
 
+    if (gb->mmu != NULL) {
+        mmu_save_battery(gb->mmu);
+    }
     mmu_destroy(gb->mmu);
     free(gb->cpu);
     free(gb->ppu);

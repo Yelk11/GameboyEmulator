@@ -11,6 +11,10 @@ void test_gb_initializes_subsystems(void);
 void test_gb_reset_sets_post_boot_state(void);
 void test_gb_tick_advances_scanline(void);
 void test_gb_run_frame_advances_exact_cycles(void);
+void test_mbc1_rom_and_ram_banking(void);
+void test_mbc3_ram_enable_and_rtc(void);
+void test_mbc5_rom_and_ram_banking(void);
+void test_echo_ram_mirroring(void);
 
 void setUp(void)
 {
@@ -34,5 +38,9 @@ int main(void)
     RUN_TEST(test_gb_reset_sets_post_boot_state);
     RUN_TEST(test_gb_tick_advances_scanline);
     RUN_TEST(test_gb_run_frame_advances_exact_cycles);
+    RUN_TEST(test_mbc1_rom_and_ram_banking);
+    RUN_TEST(test_mbc3_ram_enable_and_rtc);
+    RUN_TEST(test_mbc5_rom_and_ram_banking);
+    RUN_TEST(test_echo_ram_mirroring);
     return UNITY_END();
 }

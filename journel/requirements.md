@@ -110,6 +110,8 @@ The project is complete when all of the following are true:
 
 ### Phase 3: Implement the Memory Bus and Cartridge System
 
+**Status:** Complete
+
 **Goal:** Make every 16-bit address map to the correct subsystem.
 
 1. Redesign MMU/Bus memory access.

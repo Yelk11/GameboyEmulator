@@ -15,10 +15,10 @@
 #define GB_FRAMEBUFFER_WIDTH 160u
 #define GB_FRAMEBUFFER_HEIGHT 144u
 
-typedef struct Cartridge {
+typedef struct CartridgeInfo {
     char *rom_name;
     bool loaded;
-} Cartridge;
+} CartridgeInfo;
 
 typedef struct Timer {
     uint16_t div;
@@ -52,7 +52,7 @@ typedef struct GB {
     Timer timer;
     InterruptController interrupt;
     Joypad joypad;
-    Cartridge cartridge;
+    CartridgeInfo cartridge;
     EmulatorOptions options;
 } GB;
 
