@@ -46,6 +46,10 @@ typedef struct CPU {
     uint16_t sp; // Stack Pointer
     uint16_t pc; // Program Counter
     uint32_t cycles;
+    bool ime;
+    bool halted;
+    bool stopped;
+    bool branch_taken;
 } CPU;
 
 typedef CPU reg;

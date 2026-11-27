@@ -148,6 +148,8 @@ The project is complete when all of the following are true:
 
 ### Phase 4: Implement the LR35902 CPU
 
+**Status:** Complete
+
 **Goal:** Implement all standard and CB-prefixed instructions with correct flags and timing.
 
 1. Replace the opcode metadata's unimplemented entries with real handlers.

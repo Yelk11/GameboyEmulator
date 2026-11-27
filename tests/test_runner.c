@@ -15,6 +15,10 @@ void test_mbc1_rom_and_ram_banking(void);
 void test_mbc3_ram_enable_and_rtc(void);
 void test_mbc5_rom_and_ram_banking(void);
 void test_echo_ram_mirroring(void);
+void test_cpu_add_and_flags(void);
+void test_cpu_conditional_jr(void);
+void test_cpu_call_and_return(void);
+void test_cpu_cb_rotate(void);
 
 void setUp(void)
 {
@@ -42,5 +46,9 @@ int main(void)
     RUN_TEST(test_mbc3_ram_enable_and_rtc);
     RUN_TEST(test_mbc5_rom_and_ram_banking);
     RUN_TEST(test_echo_ram_mirroring);
+    RUN_TEST(test_cpu_add_and_flags);
+    RUN_TEST(test_cpu_conditional_jr);
+    RUN_TEST(test_cpu_call_and_return);
+    RUN_TEST(test_cpu_cb_rotate);
     return UNITY_END();
 }
