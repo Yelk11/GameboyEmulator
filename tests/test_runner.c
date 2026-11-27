@@ -24,6 +24,11 @@ void test_phase5_joypad_interrupt(void);
 void test_phase5_dma_transfer(void);
 void test_phase5_interrupt_step(void);
 void test_phase5_serial_transfer(void);
+void test_phase6_scanline_timing(void);
+void test_phase6_background_tile(void);
+void test_phase6_vblank_interrupt(void);
+void test_phase6_lyc_stat(void);
+void test_phase6_window_and_sprite_registers(void);
 
 void setUp(void)
 {
@@ -60,5 +65,10 @@ int main(void)
     RUN_TEST(test_phase5_dma_transfer);
     RUN_TEST(test_phase5_interrupt_step);
     RUN_TEST(test_phase5_serial_transfer);
+    RUN_TEST(test_phase6_scanline_timing);
+    RUN_TEST(test_phase6_background_tile);
+    RUN_TEST(test_phase6_vblank_interrupt);
+    RUN_TEST(test_phase6_lyc_stat);
+    RUN_TEST(test_phase6_window_and_sprite_registers);
     return UNITY_END();
 }

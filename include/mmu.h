@@ -45,6 +45,7 @@ typedef struct {
     uint16_t dma_remaining;
     uint8_t action_buttons;
     uint8_t dpad_buttons;
+    uint8_t ppu_mode;
 } MMU;
 
 MMU *mmu_init(void);

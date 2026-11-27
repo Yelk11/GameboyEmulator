@@ -90,8 +90,8 @@ void dma_update(Dma *dma, MMU *mmu, uint32_t t_cycles)
     cycles = t_cycles;
     while (cycles >= 4u && dma->remaining > 0u) {
         uint16_t offset = (uint16_t)(160u - dma->remaining);
-        mmu_write_byte(mmu, (uint16_t)(0xFE00u + offset),
-                       mmu_read_byte(mmu, (uint16_t)(dma->source + offset)));
+        mmu->memory[0xFE00u + offset] =
+            mmu_read_byte(mmu, (uint16_t)(dma->source + offset));
         dma->remaining--;
         cycles -= 4u;
     }
@@ -174,6 +174,7 @@ void gb_reset(GB *gb)
     }
     if (gb->ppu != NULL) {
         ppu_init(gb->ppu);
+        ppu_connect(gb->ppu, gb->mmu);
     }
 
     timer_init(&gb->timer);

@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include "mmu.h"
 
 typedef enum PPU_MODE {
     PPU_MODE_HBLANK = 0,
@@ -16,9 +17,12 @@ typedef struct PPU {
     uint8_t ly;
     uint16_t line_dot;
     uint32_t frame_cycle;
+    uint32_t framebuffer[160u * 144u];
+    MMU *mmu;
 } PPU;
 
 void ppu_init(PPU *ppu);
 void ppu_update(PPU *ppu, uint32_t t_cycles);
+void ppu_connect(PPU *ppu, MMU *mmu);
 
 #endif

@@ -248,6 +248,8 @@ static void cartridge_ram_write(Cartridge *cart, uint16_t addr, uint8_t val)
 uint8_t mmu_read_byte(MMU *mmu, uint16_t addr)
 {
     if (mmu == NULL) return 0xFFu;
+    if (addr >= 0x8000u && addr < 0xA000u && mmu->ppu_mode == 3u) return 0xFFu;
+    if (addr >= 0xFE00u && addr < 0xFEA0u && mmu->ppu_mode >= 2u) return 0xFFu;
     if (mmu->cartridge.rom == NULL) {
         if (addr == 0xFF00u) {
             uint8_t select = mmu->memory[0xFF00u] & 0x30u;
@@ -274,6 +276,8 @@ void mmu_write_byte(MMU *mmu, uint16_t addr, uint8_t val)
 {
     Cartridge *cart;
     if (mmu == NULL) return;
+    if (addr >= 0x8000u && addr < 0xA000u && mmu->ppu_mode == 3u) return;
+    if (addr >= 0xFE00u && addr < 0xFEA0u && mmu->ppu_mode >= 2u) return;
     cart = &mmu->cartridge;
     if (addr == 0xFF00u) {
         mmu->memory[addr] = val & 0x30u;

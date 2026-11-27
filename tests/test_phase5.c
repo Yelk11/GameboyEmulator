@@ -31,7 +31,7 @@ void test_phase5_dma_transfer(void)
     mmu_write_byte(gb.mmu, 0xC000u, 0xA5u);
     mmu_write_byte(gb.mmu, 0xFF46u, 0xC0u);
     gb_tick(&gb, 640u);
-    TEST_ASSERT_EQUAL_HEX8(0xA5u, mmu_read_byte(gb.mmu, 0xFE00u));
+    TEST_ASSERT_EQUAL_HEX8(0xA5u, gb.mmu->memory[0xFE00u]);
     TEST_ASSERT_FALSE(gb.dma.active);
     gb_destroy(&gb);
 }

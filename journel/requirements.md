@@ -218,6 +218,8 @@ The project is complete when all of the following are true:
 
 ### Phase 6: Implement the DMG PPU
 
+**Status:** Complete
+
 **Goal:** Render a 160x144 frame with correct timing and layering.
 
 1. Implement PPU state and LCD timing.
