@@ -2,6 +2,7 @@
 #define CPU_H
 
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 
 #include "mmu.h"
@@ -47,6 +48,7 @@ typedef struct CPU {
     uint16_t pc; // Program Counter
     uint32_t cycles;
     bool ime;
+    bool ime_enable_pending;
     bool halted;
     bool stopped;
     bool branch_taken;
@@ -58,5 +60,7 @@ typedef CPU reg;
 void cpu_init(CPU *cpu);
 bool cpu_execute_opcode(CPU *cpu, MMU *mmu, uint8_t opcode);
 bool cpu_step(CPU *cpu, MMU *mmu);
+bool cpu_disassemble(MMU *mmu, uint16_t address, char *text,
+                     size_t text_size, uint8_t *instruction_length);
 
 #endif

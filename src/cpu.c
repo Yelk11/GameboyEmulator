@@ -16,11 +16,13 @@ void cpu_init(CPU *cpu)
     cpu->pc = 0x0100u;
     cpu->cycles = 0u;
     cpu->ime = false;
+    cpu->ime_enable_pending = false;
     cpu->halted = false;
     cpu->stopped = false;
     cpu->branch_taken = true;
     cpu->halt_bug = false;
 }
+
 static uint8_t opcode_cycles(CPU *cpu, uint8_t opcode)
 {
     if (opcode == 0xcb) return 4u;
@@ -28,9 +30,8 @@ static uint8_t opcode_cycles(CPU *cpu, uint8_t opcode)
     switch (opcode) {
     case 0x00: case 0x07: case 0x0f: case 0x17: case 0x1f:
     case 0x27: case 0x2f: case 0x37: case 0x3f:
-    case 0x76: case 0x10:
-    case 0xf3: case 0xfb:
-        return 4u;
+    case 0x76: case 0x10: case 0xf3: case 0xfb:
+    return 4u;
 
     case 0x08: return 20u;
     case 0xe8: return 16u;
@@ -466,8 +467,10 @@ bool cpu_execute_opcode(CPU *cpu, MMU *mmu, uint8_t opcode)
     case 0x37: cpu->AF_reg.bytes.f = (uint8_t)((cpu->AF_reg.bytes.f & (FLAG_Z | FLAG_C)) | FLAG_C); break;
     case 0x3f: cpu->AF_reg.bytes.f ^= FLAG_C; cpu->AF_reg.bytes.f &= ~(FLAG_N | FLAG_H); break;
     case 0x76:
-        if (mmu != NULL && !cpu->ime &&
-            (mmu->memory[0xFFFFu] & mmu->memory[0xFF0Fu]) != 0u) {
+        if(!cpu->ime &&
+            (mmu_read_byte(mmu, 0xFFFFu) &
+            mmu_read_byte(mmu, 0xFF0Fu) & 0x1Fu) != 0u) 
+        {
             cpu->halt_bug = true;
         } else {
             cpu->halted = true;
@@ -576,7 +579,7 @@ bool cpu_execute_opcode(CPU *cpu, MMU *mmu, uint8_t opcode)
         if (take) cpu->pc = pop(cpu, mmu);
         break;
     }
-    case 0xd9: cpu->pc = pop(cpu, mmu); cpu->ime = true; break;
+    case 0xd9: cpu->pc = pop(cpu, mmu); cpu->ime = true; cpu->ime_enable_pending = false; break;
     case 0xc1: cpu->BC_reg.bc = pop(cpu, mmu); break;
     case 0xd1: cpu->DE_reg.de = pop(cpu, mmu); break;
     case 0xe1: cpu->HL_reg.hl = pop(cpu, mmu); break;
@@ -609,8 +612,13 @@ bool cpu_execute_opcode(CPU *cpu, MMU *mmu, uint8_t opcode)
         cpu->AF_reg.bytes.a = read8(cpu, mmu, addr);
         break;
     }
-    case 0xf3: cpu->ime = false; break;
-    case 0xfb: cpu->ime = true; break;
+    case 0xf3: /* DI */
+        cpu->ime = false;
+        cpu->ime_enable_pending = false;
+        break;
+    case 0xfb: /* EI */
+        cpu->ime_enable_pending = true;
+        break;
     default:
         fprintf(stderr, "Illegal opcode: 0x%02X at PC: 0x%04X\n",
                 opcode, (uint16_t)(cpu->pc - 1));
@@ -626,15 +634,54 @@ bool cpu_execute_opcode(CPU *cpu, MMU *mmu, uint8_t opcode)
 
 bool cpu_step(CPU *cpu, MMU *mmu)
 {
-    if (cpu != NULL && cpu->halted) {
+    if (cpu == NULL || mmu == NULL) {
+        return false;
+    }
+
+    /*
+     * Remember whether EI was executed during the previous
+     * instruction. It should take effect after this instruction.
+     */
+    bool enable_ime = cpu->ime_enable_pending;
+
+    if (cpu->halted) {
+        uint8_t ie = mmu_read_byte(mmu, 0xFFFFu);
+        uint8_t flags = mmu_read_byte(mmu, 0xFF0Fu);
+        uint8_t pending = ie & flags & 0x1Fu;
+
+        if (pending == 0u) {
+            cpu->cycles += 4u;
+            return true;
+        }
+
+        cpu->halted = false;
         cpu->cycles += 4u;
         return true;
     }
-    if (cpu != NULL && cpu->halt_bug) {
-        uint8_t opcode = mmu_read_byte(mmu, cpu->pc);
+
+    uint8_t opcode;
+
+    if (cpu->halt_bug) {
+        opcode = mmu_read_byte(mmu, cpu->pc);
         cpu->halt_bug = false;
-        return cpu_execute_opcode(cpu, mmu, opcode);
+    } else {
+        opcode = mmu_read_byte(mmu, cpu->pc++);
     }
-    uint8_t opcode = mmu_read_byte(mmu, cpu->pc++);
-    return cpu_execute_opcode(cpu, mmu, opcode);
+
+    bool success = cpu_execute_opcode(cpu, mmu, opcode);
+
+    if (!success) {
+        return false;
+    }
+
+    /*
+     * Apply the delayed EI after the following instruction.
+     * DI cancels a pending EI.
+     */
+    if (enable_ime && opcode != 0xF3u) {
+        cpu->ime = true;
+        cpu->ime_enable_pending = false;
+    }
+
+    return true;
 }

@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 
 #include "gb.h"
 
@@ -33,6 +34,77 @@ static int execute_frame(GB *gb)
     return 0;
 }
 
+static bool parse_hex_address(const char *text, uint16_t *address)
+{
+    char *end = NULL;
+    unsigned long value;
+
+    if (text == NULL || text[0] == '\0' || address == NULL) return false;
+    errno = 0;
+    value = strtoul(text, &end, 16);
+    if (errno != 0 || end == text || *end != '\0' || value > 0xFFFFu) {
+        return false;
+    }
+    *address = (uint16_t)value;
+    return true;
+}
+
+static bool parse_disassembly_count(const char *text, uint8_t *count)
+{
+    char *end = NULL;
+    unsigned long value;
+
+    if (text == NULL || text[0] == '\0' || count == NULL) return false;
+    errno = 0;
+    value = strtoul(text, &end, 10);
+    if (errno != 0 || end == text || *end != '\0' ||
+        value == 0u || value > 64u) {
+        return false;
+    }
+    *count = (uint8_t)value;
+    return true;
+}
+
+static void print_disassembly(GB *gb, const char *address_arg,
+                              const char *count_arg)
+{
+    uint16_t address;
+    uint8_t count = 8u;
+    uint8_t index;
+
+    if (address_arg[0] == '\0') {
+        address = gb->cpu->pc;
+    } else if (!parse_hex_address(address_arg, &address)) {
+        printf("Invalid address: %s\n", address_arg);
+        return;
+    }
+    if (count_arg[0] != '\0' &&
+        !parse_disassembly_count(count_arg, &count)) {
+        printf("Invalid count (use 1-64): %s\n", count_arg);
+        return;
+    }
+
+    for (index = 0u; index < count; index++) {
+        char instruction[32];
+        uint8_t length;
+        uint8_t byte_index;
+
+        if (!cpu_disassemble(gb->mmu, address, instruction,
+                             sizeof(instruction), &length)) {
+            printf("Cannot disassemble at %04X\n", address);
+            return;
+        }
+        printf("%04X:", address);
+        for (byte_index = 0u; byte_index < length; byte_index++) {
+            printf(" %02X", mmu_read_byte(
+                       gb->mmu, (uint16_t)(address + byte_index)));
+        }
+        for (; byte_index < 3u; byte_index++) printf("   ");
+        printf("  %s\n", instruction);
+        address = (uint16_t)(address + length);
+    }
+}
+
 int main(int argc, char **argv)
 {
     GB gb;
@@ -53,10 +125,12 @@ int main(int argc, char **argv)
     while (fgets(line, sizeof(line), stdin) != NULL) {
         char command[32];
         char argument[32];
+        char count_argument[32];
         unsigned long value = 0u;
         command[0] = '\0';
         argument[0] = '\0';
-        sscanf(line, "%31s %31s", command, argument);
+        count_argument[0] = '\0';
+        sscanf(line, "%31s %31s %31s", command, argument, count_argument);
 
         if (strcmp(command, "step") == 0) {
             if (execute_instruction(&gb) != 0) break;
@@ -97,6 +171,8 @@ int main(int argc, char **argv)
                 value = strtoul(argument, NULL, 16);
                 debugger_print_memory(&gb, (uint16_t)value);
             }
+        } else if (strcmp(command, "disasm") == 0) {
+            print_disassembly(&gb, argument, count_argument);
         } else if (strcmp(command, "trace") == 0) {
             gb.debugger.opcode_trace = !gb.debugger.opcode_trace;
             printf("Opcode trace %s\n",

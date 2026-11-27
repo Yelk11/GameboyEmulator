@@ -69,7 +69,10 @@ make debugger ROM=path/to/game.gb
 ```
 
 Commands include `step`, `frame`, `run`, `breakpoint XXXX`, `cpu`,
-`ppu`, `mem XXXX`, `trace`, and `quit`.
+`ppu`, `mem XXXX`, `disasm [address] [count]`, `trace`, and `quit`.
+`disasm` starts at the current PC when no address is given and defaults to
+eight instructions. Addresses are hexadecimal; the optional count is decimal
+and may be from 1 to 64.
 
 ## retrio Game Boy test ROM suite
 

@@ -353,9 +353,7 @@ static void sgb_dispatch_packet(MMU *mmu)
 uint8_t mmu_read_byte(MMU *mmu, uint16_t addr)
 {
     if (mmu == NULL) return 0xFFu;
-    if (mmu->cgb_mode && addr >= 0x8000u && addr < 0xA000u) {
-        return mmu->vram[mmu->vram_bank & 1u][addr - 0x8000u];
-    }
+    
     if (mmu->cgb_mode && addr >= 0xC000u && addr < 0xD000u) {
         return mmu->wram[0][addr - 0xC000u];
     }
@@ -373,6 +371,9 @@ uint8_t mmu_read_byte(MMU *mmu, uint16_t addr)
     if (addr == 0xFF6Au) return mmu->obj_palette_index;
     if (addr == 0xFF6Bu) return mmu->obj_palette[mmu->obj_palette_index & 0x3Fu];
     if (addr >= 0x8000u && addr < 0xA000u && mmu->ppu_mode == 3u) return 0xFFu;
+    if (mmu->cgb_mode && addr >= 0x8000u && addr < 0xA000u) {
+        return mmu->vram[mmu->vram_bank & 1u][addr - 0x8000u];
+    }
     if (addr >= 0xFE00u && addr < 0xFEA0u && mmu->ppu_mode >= 2u) return 0xFFu;
     if (mmu->cartridge.rom == NULL) {
         if (addr == 0xFF00u) {

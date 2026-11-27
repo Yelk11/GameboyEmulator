@@ -132,32 +132,97 @@ uint32_t interrupt_step(GB *gb)
     uint8_t pending;
     uint8_t source;
     uint16_t vector;
-    if (gb == NULL || gb->cpu == NULL || gb->mmu == NULL) return 0u;
-    if (!gb->cpu->ime) return 0u;
 
-    gb->interrupt.ie = gb->mmu->memory[0xFFFFu];
-    gb->interrupt.if_ = gb->mmu->memory[0xFF0Fu];
-    pending = (uint8_t)(gb->interrupt.ie & gb->interrupt.if_);
+    if (gb == NULL || gb->cpu == NULL || gb->mmu == NULL) {
+        return 0u;
+    }
+
+    uint8_t ie = mmu_read_byte(gb->mmu, 0xFFFFu);
+    uint8_t flags = mmu_read_byte(gb->mmu, 0xFF0Fu);
+
+    pending = (uint8_t)(ie & flags & 0x1Fu);
+
+    gb->interrupt.ie = ie;
+    gb->interrupt.if_ = flags;
+
+    /* Any enabled pending interrupt wakes HALT, regardless of IME. */
     if (pending != 0u && gb->cpu->halted) {
         gb->cpu->halted = false;
     }
-    if (pending == 0u) return 0u;
 
-    if ((pending & 0x01u) != 0u) { source = 0x01u; vector = 0x0040u; }
-    else if ((pending & 0x02u) != 0u) { source = 0x02u; vector = 0x0048u; }
-    else if ((pending & 0x04u) != 0u) { source = 0x04u; vector = 0x0050u; }
-    else if ((pending & 0x08u) != 0u) { source = 0x08u; vector = 0x0058u; }
-    else if ((pending & 0x10u) != 0u) { source = 0x10u; vector = 0x0060u; }
-    else return 0u;
+    /* IME controls servicing, not waking. */
+    if (!gb->cpu->ime || pending == 0u) {
+        return 0u;
+    }
 
+    /* Interrupt priority: lowest numbered bit first. */
+    if ((pending & 0x01u) != 0u) {
+        source = 0x01u;
+        vector = 0x0040u;
+    }
+    else if ((pending & 0x02u) != 0u) {
+        source = 0x02u;
+        vector = 0x0048u;
+    }
+    else if ((pending & 0x04u) != 0u) {
+        source = 0x04u;
+        vector = 0x0050u;
+    }
+    else if ((pending & 0x08u) != 0u) {
+        source = 0x08u;
+        vector = 0x0058u;
+    }
+    else if ((pending & 0x10u) != 0u) {
+        source = 0x10u;
+        vector = 0x0060u;
+    }
+    else {
+        return 0u;
+    }
+
+    /* Disable interrupts while servicing this interrupt. */
     gb->cpu->ime = false;
     gb->interrupt.ime = false;
+
+    /* Push the return address onto the stack (little-endian). */
     gb->cpu->sp = (uint16_t)(gb->cpu->sp - 2u);
-    mmu_write_byte(gb->mmu, gb->cpu->sp, (uint8_t)gb->cpu->pc);
-    mmu_write_byte(gb->mmu, (uint16_t)(gb->cpu->sp + 1u),
-                   (uint8_t)(gb->cpu->pc >> 8));
+
+    mmu_write_byte(
+        gb->mmu,
+        gb->cpu->sp,
+        (uint8_t)gb->cpu->pc
+    );
+
+    mmu_write_byte(
+        gb->mmu,
+        (uint16_t)(gb->cpu->sp + 1u),
+        (uint8_t)(gb->cpu->pc >> 8)
+    );
+
+    /* Jump to the interrupt handler. */
     gb->cpu->pc = vector;
-    gb->mmu->memory[0xFF0Fu] &= (uint8_t)~source;
+
+    /* Acknowledge the interrupt. */
+    mmu_write_byte(
+        gb->mmu,
+        0xFF0Fu,
+        (uint8_t)(flags & (uint8_t)~source)
+    );
+    static unsigned int interrupt_count = 0;
+
+    if (interrupt_count < 20u) {
+        printf(
+            "INT #%u: PC=%04X vector=%04X IE=%02X IF=%02X SP=%04X\n",
+            interrupt_count,
+            gb->cpu->pc,
+            vector,
+            ie,
+            flags,
+            gb->cpu->sp
+        );
+    }
+
+    interrupt_count++;
     return 20u;
 }
 

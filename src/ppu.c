@@ -7,7 +7,7 @@ void ppu_init(PPU *ppu)
     if (ppu == NULL) {
         return;
     }
-
+    ppu->window_line = 0u;
     ppu->mode = PPU_MODE_OAM;
     ppu->ly = 0u;
     ppu->line_dot = 0u;
@@ -20,7 +20,13 @@ void ppu_init(PPU *ppu)
 
 void ppu_connect(PPU *ppu, MMU *mmu)
 {
-    if (ppu != NULL) ppu->mmu = mmu;
+    if (ppu == NULL || mmu == NULL) {
+        return;
+    }
+
+    ppu->mmu = mmu;
+    mmu->ppu_mode = (uint8_t)ppu->mode;
+    mmu->memory[0xFF44u] = ppu->ly;
 }
 
 static uint8_t shade_for_palette(uint8_t palette, uint8_t color)

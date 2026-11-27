@@ -54,7 +54,13 @@ int main(int argc, char **argv)
                 uint32_t cycles = gb.cpu->cycles - before;
                 gb_tick(&gb, cycles);
                 elapsed += cycles;
-                interrupt_step(&gb);
+
+                uint32_t interrupt_cycles = interrupt_step(&gb);
+
+                if (interrupt_cycles != 0u) {
+                    gb_tick(&gb, interrupt_cycles);
+                    elapsed += interrupt_cycles;
+                }
             } else {
                 gb_tick(&gb, 4u);
                 elapsed += 4u;
@@ -87,6 +93,17 @@ int main(int argc, char **argv)
             if (strlen(serial_output) > 0u) {
                 fprintf(stderr, "Serial: %s\n", serial_output);
             }
+            fprintf(stderr,
+                "Serial length: %zu, MMU serial length: %zu\n",
+                serial_length,
+                gb.mmu->serial_output_length);
+            fprintf(stderr,
+                "CPU: PC=%04X IME=%u HALT=%u SP=%04X cycles=%u\n",
+                gb.cpu->pc,
+                gb.cpu->ime ? 1u : 0u,
+                gb.cpu->halted ? 1u : 0u,
+                gb.cpu->sp,
+                gb.cpu->cycles);
             fprintf(stderr,
                     "Frame=%u T=%llu PC=%04X LCDC=%02X LY=%02X ROMB=%04X RAMB=%02X\n",
                     frame, (unsigned long long)gb.total_t_cycles,
