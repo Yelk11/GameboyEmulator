@@ -12,36 +12,36 @@ typedef struct CPU {
         struct {
             uint8_t f; // Flags (lower byte on little-endian)
             uint8_t a; // Accumulator (upper byte on little-endian)
-        };
+        } bytes;
         uint16_t af;
-    }AF_reg;
+    } AF_reg;
 
     // BC Register Pair
     union {
         struct {
             uint8_t c;
             uint8_t b;
-        };
+        } bytes;
         uint16_t bc;
-    }BC_reg;
+    } BC_reg;
 
     // DE Register Pair
     union {
         struct {
             uint8_t e;
             uint8_t d;
-        };
+        } bytes;
         uint16_t de;
-    }DE_reg;
+    } DE_reg;
 
     // HL Register Pair
     union {
         struct {
             uint8_t l;
             uint8_t h;
-        };
+        } bytes;
         uint16_t hl;
-    }HL_reg;
+    } HL_reg;
 
     uint16_t sp; // Stack Pointer
     uint16_t pc; // Program Counter

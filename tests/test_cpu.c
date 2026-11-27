@@ -31,8 +31,8 @@ void test_cpu_loads_bc_immediate(void)
     mmu.memory[1] = 0x12;
 
     TEST_ASSERT_TRUE(cpu_execute_opcode(&cpu, &mmu, 0x01));
-    TEST_ASSERT_EQUAL_HEX8(0x34, cpu.c);
-    TEST_ASSERT_EQUAL_HEX8(0x12, cpu.b);
+    TEST_ASSERT_EQUAL_HEX8(0x34, cpu.BC_reg.bytes.c);
+    TEST_ASSERT_EQUAL_HEX8(0x12, cpu.BC_reg.bytes.b);
     TEST_ASSERT_EQUAL_UINT32(12, cpu.cycles);
 }
 

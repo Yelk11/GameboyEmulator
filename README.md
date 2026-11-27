@@ -17,3 +17,15 @@ connected; add test functions under `tests/` and register them with `RUN_TEST`
 in `tests/test_runner.c`. The test executable includes project sources except
 the application entry point (`src/gb.c`) to avoid linking its `main` alongside
 the test runner.
+
+Load a ROM from the command line:
+
+```sh
+./build/gameboy path/to/game.gb
+```
+
+Run AddressSanitizer and UndefinedBehaviorSanitizer checks with:
+
+```sh
+make test-sanitized
+```

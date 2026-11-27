@@ -17,13 +17,17 @@ else
 MKDIR_P = mkdir -p "$(BUILD_DIR)"
 endif
 
-.PHONY: all app test clean
+.PHONY: all app test clean test-sanitized
 
 all: app
 
 app: $(APP_BINARY)
 
 test: $(TEST_BINARY)
+	./$(TEST_BINARY)
+
+test-sanitized: CFLAGS += -fsanitize=address,undefined -fno-omit-frame-pointer
+test-sanitized: $(TEST_BINARY)
 	./$(TEST_BINARY)
 
 $(APP_BINARY): $(APP_SOURCES)

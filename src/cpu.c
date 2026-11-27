@@ -24,6 +24,13 @@ static void op_00_nop(CPU *cpu, MMU *mmu, uint8_t opcode)
     (void)opcode;
 }
 
+static void op_01_ld_bc_d16(CPU *cpu, MMU *mmu, uint8_t opcode)
+{
+    (void)opcode;
+    cpu->BC_reg.bytes.c = mmu_read_byte(mmu, cpu->pc++);
+    cpu->BC_reg.bytes.b = mmu_read_byte(mmu, cpu->pc++);
+}
+
 
 
 static void op_cb_prefix(CPU *cpu, MMU *mmu, uint8_t opcode);
@@ -36,7 +43,7 @@ static void op_cb_00_rlc_b(CPU *cpu, MMU *mmu, uint8_t opcode);
  */
 static const Instruction opcodes[256] = {
     [0x00] = { "NOP", 1, 4, 0, op_00_nop },
-    [0x01] = { "LD BC, d16", 3, 12, 0, op_unimplemented },
+    [0x01] = { "LD BC, d16", 3, 12, 0, op_01_ld_bc_d16 },
     [0x02] = { "LD (BC), A", 1, 8, 0, op_unimplemented },
     [0x03] = { "INC BC", 1, 8, 0, op_unimplemented },
     [0x04] = { "INC B", 1, 4, 0, op_unimplemented },
