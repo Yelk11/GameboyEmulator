@@ -354,6 +354,8 @@ The project is complete when all of the following are true:
 
 ### Phase 11: Add GBC Compatibility
 
+**Status:** Complete
+
 **Goal:** Extend, rather than rewrite, the DMG core.
 
 1. Detect CGB cartridges from the cartridge header.

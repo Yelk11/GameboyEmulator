@@ -35,6 +35,7 @@ typedef struct Cartridge {
     bool rtc_latched;
     char save_path[1024];
     uint8_t rtc[5];
+    bool cgb_supported;
 } Cartridge;
 
 typedef struct {
@@ -46,6 +47,21 @@ typedef struct {
     uint8_t action_buttons;
     uint8_t dpad_buttons;
     uint8_t ppu_mode;
+    bool cgb_mode;
+    bool double_speed;
+    uint8_t speed_switch_pending;
+    uint8_t vram_bank;
+    uint8_t wram_bank;
+    uint8_t vram[2][8192];
+    uint8_t wram[8][4096];
+    uint8_t bg_palette[64];
+    uint8_t obj_palette[64];
+    uint8_t bg_palette_index;
+    uint8_t obj_palette_index;
+    uint8_t hdma_source[2];
+    uint8_t hdma_destination[2];
+    uint8_t hdma_remaining;
+    bool hdma_active;
 } MMU;
 
 MMU *mmu_init(void);
@@ -55,6 +71,7 @@ void mmu_destroy(MMU *mmu);
 bool mmu_save_battery(MMU *mmu);
 bool mmu_load_battery(MMU *mmu);
 const char *mmu_cartridge_type_name(const MMU *mmu);
+bool mmu_is_cgb(const MMU *mmu);
 
 uint8_t mmu_read_byte(MMU *mmu, uint16_t addr);
 

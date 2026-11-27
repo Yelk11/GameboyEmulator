@@ -255,6 +255,33 @@ void gb_tick(GB *gb, uint32_t t_cycles)
     gb->mmu->memory[0xFF06u] = gb->timer.tma;
     gb->mmu->memory[0xFF07u] = gb->timer.tac;
     gb->mmu->memory[0xFF04u] = (uint8_t)(gb->timer.div >> 8);
+    if (gb->mmu->cgb_mode && gb->mmu->hdma_active) {
+        uint16_t source = (uint16_t)(((uint16_t)gb->mmu->hdma_source[0] << 8) |
+                                     gb->mmu->hdma_source[1]);
+        uint16_t destination = (uint16_t)(0x8000u +
+            (((uint16_t)gb->mmu->hdma_destination[0] << 8 |
+              gb->mmu->hdma_destination[1]) & 0x1FF0u));
+        if (t_cycles >= 456u && gb->ppu->mode == PPU_MODE_HBLANK) {
+            uint16_t index;
+            for (index = 0u; index < 16u; index++) {
+                mmu_write_byte(gb->mmu,
+                               (uint16_t)(destination + index),
+                               mmu_read_byte(gb->mmu,
+                                             (uint16_t)(source + index)));
+            }
+            gb->mmu->hdma_source[0] = (uint8_t)(source >> 8);
+            gb->mmu->hdma_source[1] = (uint8_t)(source & 0xF0u);
+            gb->mmu->hdma_destination[0] = (uint8_t)((destination >> 8) & 0x1Fu);
+            gb->mmu->hdma_destination[1] = (uint8_t)(destination & 0xF0u);
+            if (gb->mmu->hdma_remaining > 0u)
+                gb->mmu->hdma_remaining--;
+            gb->mmu->memory[0xFF55u] =
+                gb->mmu->hdma_remaining == 0u ?
+                0xFFu : (uint8_t)(gb->mmu->hdma_remaining - 1u);
+            if (gb->mmu->hdma_remaining == 0u)
+                gb->mmu->hdma_active = false;
+        }
+    }
     dma_update(&gb->dma, gb->mmu, t_cycles);
     gb->serial.sb = gb->mmu->memory[0xFF01u];
     gb->serial.sc = gb->mmu->memory[0xFF02u];

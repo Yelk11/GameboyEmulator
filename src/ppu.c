@@ -36,6 +36,23 @@ static uint32_t shade_rgb(uint8_t shade)
     }
 }
 
+static uint32_t cgb_palette_rgb(MMU *mmu, uint8_t palette,
+                                uint8_t color, bool sprite)
+{
+    uint8_t *palettes = sprite ? mmu->obj_palette : mmu->bg_palette;
+    uint16_t index = (uint16_t)(palette * 8u + color * 2u);
+    uint16_t rgb = (uint16_t)(palettes[index] |
+                              ((uint16_t)palettes[index + 1u] << 8));
+    uint8_t r = (uint8_t)((rgb >> 0u) & 31u);
+    uint8_t g = (uint8_t)((rgb >> 5u) & 31u);
+    uint8_t b = (uint8_t)((rgb >> 10u) & 31u);
+    r = (uint8_t)((r * 255u + 15u) / 31u);
+    g = (uint8_t)((g * 255u + 15u) / 31u);
+    b = (uint8_t)((b * 255u + 15u) / 31u);
+    return 0xFF000000u | ((uint32_t)r << 16) |
+           ((uint32_t)g << 8) | b;
+}
+
 static uint8_t background_tile_pixel(PPU *ppu, uint16_t map_addr,
                                      uint8_t x, uint8_t y)
 {
@@ -93,6 +110,33 @@ static void ppu_render_line(PPU *ppu)
         uint8_t color;
         uint8_t shade;
 
+        if (ppu->mmu->cgb_mode) {
+            uint8_t tile_x = (uint8_t)((source_x >> 3u) & 31u);
+            uint8_t tile_y = (uint8_t)((source_y >> 3u) & 31u);
+            uint16_t attr_addr = (uint16_t)(map_addr + tile_y * 32u + tile_x);
+            uint8_t attr = ppu->mmu->vram[1][attr_addr - 0x8000u];
+            uint16_t attr_tile_map = (uint16_t)(attr_addr - 0x9800u);
+            uint16_t tile_addr = (uint16_t)(map_addr + tile_y * 32u + tile_x);
+            uint8_t tile = ppu->mmu->vram[0][tile_addr - 0x8000u];
+            uint8_t row = (uint8_t)(source_y & 7u);
+            if (attr & 0x40u) row = (uint8_t)(7u - row);
+            if ((lcdc & 0x10u) != 0u) {
+                tile_addr = (uint16_t)(0x8000u + tile * 16u);
+            } else {
+                tile_addr = (uint16_t)(0x9000u + (int16_t)((int8_t)tile) * 16);
+            }
+            uint8_t bank = (attr & 0x08u) != 0u ? 1u : 0u;
+            uint8_t low = ppu->mmu->vram[bank][tile_addr - 0x8000u + row * 2u];
+            uint8_t high = ppu->mmu->vram[bank][tile_addr - 0x8000u + row * 2u + 1u];
+            uint8_t bit = (attr & 0x20u) != 0u ? (x & 7u) : (uint8_t)(7u - (x & 7u));
+            color = (uint8_t)(((high >> bit) & 1u) << 1u |
+                              ((low >> bit) & 1u));
+            ppu->framebuffer[ly * GB_FRAMEBUFFER_WIDTH + x] =
+                cgb_palette_rgb(ppu->mmu, attr & 7u, color, false);
+            (void)attr_tile_map;
+            continue;
+        }
+
         if ((lcdc & 0x20u) != 0u && ly >= wy && x + 7u >= wx) {
             uint8_t window_x = (uint8_t)(x - (wx > 7u ? wx - 7u : 0u));
             uint16_t window_map = (lcdc & 0x40u) != 0u ? 0x9C00u : 0x9800u;
@@ -128,8 +172,14 @@ static void ppu_render_line(PPU *ppu)
                 tile &= 0xFEu;
                 if (row >= 8u) { tile++; row = (uint8_t)(row - 8u); }
             }
-            tile_low = mmu_read_byte(ppu->mmu, (uint16_t)(0x8000u + tile * 16u + row * 2u));
-            tile_high = mmu_read_byte(ppu->mmu, (uint16_t)(0x8000u + tile * 16u + row * 2u + 1u));
+            if (ppu->mmu->cgb_mode && (attributes & 0x08u) != 0u) {
+                uint16_t offset = (uint16_t)(tile * 16u + row * 2u);
+                tile_low = ppu->mmu->vram[1][offset];
+                tile_high = ppu->mmu->vram[1][offset + 1u];
+            } else {
+                tile_low = mmu_read_byte(ppu->mmu, (uint16_t)(0x8000u + tile * 16u + row * 2u));
+                tile_high = mmu_read_byte(ppu->mmu, (uint16_t)(0x8000u + tile * 16u + row * 2u + 1u));
+            }
 
             for (x = 0u; x < 8u; x++) {
                 int16_t screen_x = sprite_x + x;
@@ -145,8 +195,13 @@ static void ppu_render_line(PPU *ppu)
                 {
                     uint8_t palette = (attributes & 0x10u) != 0u ?
                                       ppu->mmu->memory[0xFF49u] : ppu->mmu->memory[0xFF48u];
-                    ppu->framebuffer[ly * GB_FRAMEBUFFER_WIDTH + screen_x] =
-                        shade_rgb(shade_for_palette(palette, color));
+                    if (ppu->mmu->cgb_mode) {
+                        ppu->framebuffer[ly * GB_FRAMEBUFFER_WIDTH + screen_x] =
+                            cgb_palette_rgb(ppu->mmu, attributes & 7u, color, true);
+                    } else {
+                        ppu->framebuffer[ly * GB_FRAMEBUFFER_WIDTH + screen_x] =
+                            shade_rgb(shade_for_palette(palette, color));
+                    }
                 }
             }
         }

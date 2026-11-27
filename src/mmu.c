@@ -11,6 +11,7 @@ MMU *mmu_init(void)
     mmu->cartridge.rom_bank = 1u;
     mmu->action_buttons = 0x0Fu;
     mmu->dpad_buttons = 0x0Fu;
+    mmu->wram_bank = 1u;
     return mmu;
 }
 
@@ -115,6 +116,9 @@ bool mmu_load_rom(MMU *mmu, const char *rom_name)
     cart->rom_size = (size_t)rom_size;
     if ((size_t)rom_size >= 0x150u) {
         cart->type = cartridge_type(cart->rom[0x147u]);
+        cart->cgb_supported = cart->rom[0x143u] == 0x80u ||
+                              cart->rom[0x143u] == 0xC0u;
+        mmu->cgb_mode = cart->cgb_supported;
         if (cart->type == CARTRIDGE_MBC2) {
             cart->ram_size = 512u;
         } else if (cart->type == CARTRIDGE_MBC6) {
@@ -194,6 +198,11 @@ const char *mmu_cartridge_type_name(const MMU *mmu)
     }
 }
 
+bool mmu_is_cgb(const MMU *mmu)
+{
+    return mmu != NULL && mmu->cgb_mode;
+}
+
 static uint8_t cartridge_rom_read(const Cartridge *cart, uint16_t addr)
 {
     size_t index;
@@ -248,6 +257,25 @@ static void cartridge_ram_write(Cartridge *cart, uint16_t addr, uint8_t val)
 uint8_t mmu_read_byte(MMU *mmu, uint16_t addr)
 {
     if (mmu == NULL) return 0xFFu;
+    if (mmu->cgb_mode && addr >= 0x8000u && addr < 0xA000u) {
+        return mmu->vram[mmu->vram_bank & 1u][addr - 0x8000u];
+    }
+    if (mmu->cgb_mode && addr >= 0xC000u && addr < 0xD000u) {
+        return mmu->wram[0][addr - 0xC000u];
+    }
+    if (mmu->cgb_mode && addr >= 0xD000u && addr < 0xE000u) {
+        uint8_t bank = mmu->wram_bank < 1u ? 1u : mmu->wram_bank;
+        if (bank > 7u) bank = 1u;
+        return mmu->wram[bank][addr - 0xD000u];
+    }
+    if (addr == 0xFF4Fu) return 0xFEu | (mmu->vram_bank & 1u);
+    if (addr == 0xFF70u) return 0xF8u | (mmu->wram_bank & 7u);
+    if (addr == 0xFF4Du) return (mmu->double_speed ? 0x80u : 0u) |
+                               (mmu->speed_switch_pending ? 1u : 0u);
+    if (addr == 0xFF68u) return mmu->bg_palette_index;
+    if (addr == 0xFF69u) return mmu->bg_palette[mmu->bg_palette_index & 0x3Fu];
+    if (addr == 0xFF6Au) return mmu->obj_palette_index;
+    if (addr == 0xFF6Bu) return mmu->obj_palette[mmu->obj_palette_index & 0x3Fu];
     if (addr >= 0x8000u && addr < 0xA000u && mmu->ppu_mode == 3u) return 0xFFu;
     if (addr >= 0xFE00u && addr < 0xFEA0u && mmu->ppu_mode >= 2u) return 0xFFu;
     if (mmu->cartridge.rom == NULL) {
@@ -276,6 +304,81 @@ void mmu_write_byte(MMU *mmu, uint16_t addr, uint8_t val)
 {
     Cartridge *cart;
     if (mmu == NULL) return;
+    if (addr >= 0xFF51u && addr <= 0xFF55u && mmu->cgb_mode) {
+        mmu->memory[addr] = val;
+        if (addr == 0xFF51u) mmu->hdma_source[0] = val;
+        if (addr == 0xFF52u) mmu->hdma_source[1] = val & 0xF0u;
+        if (addr == 0xFF53u) mmu->hdma_destination[0] = val & 0x1Fu;
+        if (addr == 0xFF54u) mmu->hdma_destination[1] = val & 0xF0u;
+        if (addr == 0xFF55u) {
+            if ((val & 0x80u) == 0u) {
+                mmu->hdma_active = false;
+                mmu->hdma_remaining = (uint8_t)((val & 0x7Fu) + 1u);
+            } else {
+                mmu->hdma_active = true;
+                mmu->hdma_remaining = (uint8_t)((val & 0x7Fu) + 1u);
+            }
+            mmu->memory[addr] = (uint8_t)(mmu->hdma_remaining - 1u);
+        }
+        return;
+    }
+    if (mmu->cgb_mode && addr >= 0x8000u && addr < 0xA000u) {
+        if (mmu->ppu_mode != 3u)
+            mmu->vram[mmu->vram_bank & 1u][addr - 0x8000u] = val;
+        return;
+    }
+    if (mmu->cgb_mode && addr >= 0xC000u && addr < 0xD000u) {
+        mmu->wram[0][addr - 0xC000u] = val;
+        mmu->memory[addr] = val;
+        return;
+    }
+    if (mmu->cgb_mode && addr >= 0xD000u && addr < 0xE000u) {
+        uint8_t bank = mmu->wram_bank < 1u ? 1u : mmu->wram_bank;
+        if (bank > 7u) bank = 1u;
+        mmu->wram[bank][addr - 0xD000u] = val;
+        mmu->memory[addr] = val;
+        return;
+    }
+    if (addr == 0xFF4Fu) {
+        mmu->vram_bank = val & 1u;
+        mmu->memory[addr] = mmu->vram_bank;
+        return;
+    }
+    if (addr == 0xFF70u) {
+        mmu->wram_bank = val & 7u;
+        if (mmu->wram_bank == 0u) mmu->wram_bank = 1u;
+        mmu->memory[addr] = mmu->wram_bank;
+        return;
+    }
+    if (addr == 0xFF4Du) {
+        mmu->speed_switch_pending = val & 1u;
+        mmu->memory[addr] = val & 1u;
+        return;
+    }
+    if (addr == 0xFF68u) {
+        mmu->bg_palette_index = val;
+        mmu->memory[addr] = val;
+        return;
+    }
+    if (addr == 0xFF69u) {
+        mmu->bg_palette[mmu->bg_palette_index & 0x3Fu] = val;
+        if (mmu->bg_palette_index & 0x80u)
+            mmu->bg_palette_index = (uint8_t)(0x80u |
+                ((mmu->bg_palette_index + 1u) & 0x3Fu));
+        return;
+    }
+    if (addr == 0xFF6Au) {
+        mmu->obj_palette_index = val;
+        mmu->memory[addr] = val;
+        return;
+    }
+    if (addr == 0xFF6Bu) {
+        mmu->obj_palette[mmu->obj_palette_index & 0x3Fu] = val;
+        if (mmu->obj_palette_index & 0x80u)
+            mmu->obj_palette_index = (uint8_t)(0x80u |
+                ((mmu->obj_palette_index + 1u) & 0x3Fu));
+        return;
+    }
     if (addr >= 0x8000u && addr < 0xA000u && mmu->ppu_mode == 3u) return;
     if (addr >= 0xFE00u && addr < 0xFEA0u && mmu->ppu_mode >= 2u) return;
     cart = &mmu->cartridge;

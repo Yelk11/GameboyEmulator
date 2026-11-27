@@ -658,7 +658,16 @@ bool cpu_execute_opcode(CPU *cpu, MMU *mmu, uint8_t opcode)
     case 0x37: cpu->AF_reg.bytes.f = (uint8_t)((cpu->AF_reg.bytes.f & (FLAG_Z | FLAG_C)) | FLAG_C); break;
     case 0x3f: cpu->AF_reg.bytes.f ^= FLAG_C; cpu->AF_reg.bytes.f &= ~(FLAG_N | FLAG_H); break;
     case 0x76: cpu->halted = true; break;
-    case 0x10: cpu->stopped = true; cpu->pc++; break;
+    case 0x10:
+        cpu->stopped = true;
+        cpu->pc++;
+        if (mmu != NULL && mmu->cgb_mode &&
+            mmu->speed_switch_pending != 0u) {
+            mmu->double_speed = !mmu->double_speed;
+            mmu->speed_switch_pending = 0u;
+            cpu->stopped = false;
+        }
+        break;
     case 0xcb: op_cb_prefix(cpu, mmu, opcode); break;
     case 0x09: case 0x19: case 0x29: case 0x39: {
         uint16_t value = *register_pair(cpu, (uint8_t)((opcode - 0x09u) >> 4));

@@ -33,6 +33,10 @@ void test_phase9_breakpoints(void);
 void test_phase9_debugger_state(void);
 void test_phase10_save_and_load_state(void);
 void test_phase10_reject_wrong_rom(void);
+void test_phase11_cgb_header_and_vram(void);
+void test_phase11_wram_and_palette(void);
+void test_phase11_speed_switch(void);
+void test_phase11_hdma_register(void);
 
 void setUp(void)
 {
@@ -78,5 +82,9 @@ int main(void)
     RUN_TEST(test_phase9_debugger_state);
     RUN_TEST(test_phase10_save_and_load_state);
     RUN_TEST(test_phase10_reject_wrong_rom);
+    RUN_TEST(test_phase11_cgb_header_and_vram);
+    RUN_TEST(test_phase11_wram_and_palette);
+    RUN_TEST(test_phase11_speed_switch);
+    RUN_TEST(test_phase11_hdma_register);
     return UNITY_END();
 }
