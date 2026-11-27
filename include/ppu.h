@@ -17,6 +17,8 @@ typedef struct PPU {
     uint8_t ly;
     uint16_t line_dot;
     uint32_t frame_cycle;
+    uint8_t window_line;
+    bool stat_irq_line;
     uint32_t framebuffer[160u * 144u];
     uint32_t sgb_framebuffer[256u * 224u];
     MMU *mmu;

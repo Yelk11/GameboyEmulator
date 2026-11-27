@@ -179,6 +179,16 @@ void gb_reset(GB *gb)
         ppu_init(gb->ppu);
         ppu_connect(gb->ppu, gb->mmu);
     }
+    if (gb->mmu != NULL) {
+        gb->mmu->memory[0xFF40u] = 0x91u;
+        gb->mmu->memory[0xFF41u] = 0x86u;
+        gb->mmu->memory[0xFF44u] = 0u;
+        gb->mmu->memory[0xFF45u] = 0u;
+        gb->mmu->memory[0xFF47u] = 0xFCu;
+        gb->mmu->memory[0xFF48u] = 0xFFu;
+        gb->mmu->memory[0xFF49u] = 0xFFu;
+        gb->mmu->ppu_mode = PPU_MODE_OAM;
+    }
 
     timer_init(&gb->timer);
     interrupt_init(&gb->interrupt);

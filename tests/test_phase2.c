@@ -33,6 +33,8 @@ void test_gb_reset_sets_post_boot_state(void)
     TEST_ASSERT_EQUAL_UINT8(0u, gb.timer.div);
     TEST_ASSERT_EQUAL_UINT8(0u, gb.interrupt.ie);
     TEST_ASSERT_FALSE(gb.interrupt.ime);
+    TEST_ASSERT_EQUAL_HEX8(0x91u, gb.mmu->memory[0xFF40u]);
+    TEST_ASSERT_EQUAL_HEX8(0xFCu, gb.mmu->memory[0xFF47u]);
 
     gb_destroy(&gb);
 }

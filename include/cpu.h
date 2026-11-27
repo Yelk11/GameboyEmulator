@@ -55,8 +55,6 @@ typedef struct CPU {
 
 typedef CPU reg;
 
-typedef void (*cpu_opcode_handler)(CPU *cpu, MMU *mmu, uint8_t opcode);
-
 void cpu_init(CPU *cpu);
 bool cpu_execute_opcode(CPU *cpu, MMU *mmu, uint8_t opcode);
 bool cpu_step(CPU *cpu, MMU *mmu);

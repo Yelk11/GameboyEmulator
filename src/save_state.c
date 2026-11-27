@@ -4,7 +4,7 @@
 #include "gb.h"
 
 #define SAVE_STATE_MAGIC "GBSTATE1"
-#define SAVE_STATE_VERSION 1u
+#define SAVE_STATE_VERSION 3u
 #define SAVE_STATE_SLOT_MAX 9u
 
 typedef struct SaveHeader {
@@ -150,7 +150,9 @@ bool gb_save_state(GB *gb, uint8_t slot)
         !write_bool(fp, gb->mmu->dma_active) ||
         !write_u32(fp, gb->mmu->dma_source) ||
         !write_u32(fp, gb->mmu->dma_remaining) ||
-        !write_u32(fp, gb->mmu->ppu_mode)) {
+        !write_u32(fp, gb->mmu->ppu_mode) ||
+        !write_bool(fp, gb->ppu->stat_irq_line) ||
+        !write_u32(fp, gb->ppu->window_line)) {
         fclose(fp);
         remove(path);
         return false;
@@ -174,6 +176,8 @@ bool gb_load_state(GB *gb, uint8_t slot)
     uint32_t sb, sc, serial_counter;
     uint32_t ppu_mode, ly, line_dot, frame_cycle;
     uint32_t dma_source_reg, dma_remaining_reg, ppu_mode_reg;
+    bool stat_irq_line = false;
+    uint32_t window_line = 0u;
 
     if (gb == NULL || gb->cpu == NULL || gb->mmu == NULL ||
         gb->ppu == NULL || !state_path(gb, slot, path, sizeof(path))) {
@@ -184,7 +188,7 @@ bool gb_load_state(GB *gb, uint8_t slot)
     if (fp == NULL) return false;
     if (fread(&header, sizeof(header), 1u, fp) != 1u ||
         memcmp(header.magic, SAVE_STATE_MAGIC, 8u) != 0 ||
-        header.version != SAVE_STATE_VERSION ||
+        (header.version < 1u || header.version > SAVE_STATE_VERSION) ||
         header.rom_size != (uint32_t)gb->mmu->cartridge.rom_size ||
         header.rom_hash != rom_hash(gb->mmu->cartridge.rom,
                                     gb->mmu->cartridge.rom_size) ||
@@ -234,7 +238,9 @@ bool gb_load_state(GB *gb, uint8_t slot)
         !read_bool(fp, &gb->mmu->dma_active) ||
         !read_u32(fp, &dma_source_reg) ||
         !read_u32(fp, &dma_remaining_reg) ||
-        !read_u32(fp, &ppu_mode_reg)) {
+        !read_u32(fp, &ppu_mode_reg) ||
+        (header.version >= 2u && !read_bool(fp, &stat_irq_line)) ||
+        (header.version >= 3u && !read_u32(fp, &window_line))) {
         fclose(fp);
         return false;
     }
@@ -271,6 +277,8 @@ bool gb_load_state(GB *gb, uint8_t slot)
     gb->ppu->ly = (uint8_t)ly;
     gb->ppu->line_dot = (uint16_t)line_dot;
     gb->ppu->frame_cycle = frame_cycle;
+    gb->ppu->stat_irq_line = stat_irq_line;
+    gb->ppu->window_line = (uint8_t)window_line;
     gb->mmu->dma_source = (uint8_t)dma_source_reg;
     gb->mmu->dma_remaining = (uint16_t)dma_remaining_reg;
     gb->mmu->ppu_mode = (uint8_t)ppu_mode_reg;

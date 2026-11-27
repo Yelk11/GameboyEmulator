@@ -26,6 +26,8 @@ void test_phase10_save_and_load_state(void)
     gb.cpu->cycles = 12345u;
     gb.mmu->memory[0xC000u] = 0xA5u;
     gb.ppu->ly = 42u;
+    gb.ppu->window_line = 7u;
+    gb.ppu->stat_irq_line = true;
     gb.timer.tima = 0x77u;
     gb.joypad.action_buttons = 0x02u;
 
@@ -37,6 +39,8 @@ void test_phase10_save_and_load_state(void)
     gb.cpu->cycles = 0u;
     gb.mmu->memory[0xC000u] = 0u;
     gb.ppu->ly = 0u;
+    gb.ppu->window_line = 0u;
+    gb.ppu->stat_irq_line = false;
     gb.timer.tima = 0u;
     gb.joypad.action_buttons = 0x0Fu;
 
@@ -47,6 +51,8 @@ void test_phase10_save_and_load_state(void)
     TEST_ASSERT_EQUAL_UINT32(12345u, gb.cpu->cycles);
     TEST_ASSERT_EQUAL_HEX8(0xA5u, gb.mmu->memory[0xC000u]);
     TEST_ASSERT_EQUAL_HEX8(42u, gb.ppu->ly);
+    TEST_ASSERT_EQUAL_HEX8(7u, gb.ppu->window_line);
+    TEST_ASSERT_TRUE(gb.ppu->stat_irq_line);
     TEST_ASSERT_EQUAL_HEX8(0x77u, gb.timer.tima);
     TEST_ASSERT_EQUAL_HEX8(0x02u, gb.joypad.action_buttons);
 
