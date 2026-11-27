@@ -19,6 +19,8 @@ void cpu_init(CPU *cpu)
     cpu->halted = false;
     cpu->stopped = false;
     cpu->branch_taken = true;
+    cpu->halt_bug = false;
+    cpu->halt_bug = false;
 }
 
 typedef struct {
@@ -414,12 +416,16 @@ static void add_a(CPU *cpu, uint8_t value, bool carry_in)
 static void sub_a(CPU *cpu, uint8_t value, bool carry_in)
 {
     uint8_t a = cpu->AF_reg.bytes.a;
-    uint16_t carry = carry_in && (cpu->AF_reg.bytes.f & FLAG_C) ? 1u : 0u;
-    int32_t result = (int32_t)a - value - carry;
+    uint8_t carry = (uint8_t)(carry_in &&
+                              (cpu->AF_reg.bytes.f & FLAG_C) ? 1u : 0u);
+    uint16_t result = (uint16_t)((uint16_t)a -
+                                 (uint16_t)value - carry);
     cpu->AF_reg.bytes.f = FLAG_N;
-    if (result == 0) cpu->AF_reg.bytes.f |= FLAG_Z;
-    if ((a & 0x0Fu) < ((value & 0x0Fu) + carry)) cpu->AF_reg.bytes.f |= FLAG_H;
-    if (result < 0) cpu->AF_reg.bytes.f |= FLAG_C;
+    if ((uint8_t)result == 0u) cpu->AF_reg.bytes.f |= FLAG_Z;
+    if ((a & 0x0Fu) < ((value & 0x0Fu) + carry)) {
+        cpu->AF_reg.bytes.f |= FLAG_H;
+    }
+    if (a < (uint16_t)value + carry) cpu->AF_reg.bytes.f |= FLAG_C;
     cpu->AF_reg.bytes.a = (uint8_t)result;
 }
 
@@ -520,7 +526,11 @@ static void op_cb_prefix(CPU *cpu, MMU *mmu, uint8_t opcode)
         uint8_t bit = (uint8_t)((operation - 24u) & 7u);
         set_register(cpu, mmu, reg_index, (uint8_t)(value | (uint8_t)(1u << bit)));
     }
-    cpu->cycles += reg_index == 6u ? 16u : 8u;
+    if (reg_index == 6u) {
+        cpu->cycles += (cb_opcode >= 0x40u && cb_opcode < 0x80u) ? 12u : 16u;
+    } else {
+        cpu->cycles += 8u;
+    }
 }
 
 bool cpu_execute_opcode(CPU *cpu, MMU *mmu, uint8_t opcode)
@@ -639,25 +649,39 @@ bool cpu_execute_opcode(CPU *cpu, MMU *mmu, uint8_t opcode)
     }
     case 0x27: {
         uint8_t a = cpu->AF_reg.bytes.a;
+        uint8_t correction = 0u;
+        bool old_carry = (cpu->AF_reg.bytes.f & FLAG_C) != 0u;
         if (!(cpu->AF_reg.bytes.f & FLAG_N)) {
-            if ((cpu->AF_reg.bytes.f & FLAG_H) || (a & 0x0Fu) > 9u) a += 6u;
-            if ((cpu->AF_reg.bytes.f & FLAG_C) || a > 0x99u) {
-                a += 0x60u;
-                cpu->AF_reg.bytes.f |= FLAG_C;
-            }
+            if ((cpu->AF_reg.bytes.f & FLAG_H) ||
+                (a & 0x0Fu) > 9u) correction |= 0x06u;
+            if (old_carry || a > 0x99u) correction |= 0x60u;
+            a = (uint8_t)(a + correction);
         } else {
-            if (cpu->AF_reg.bytes.f & FLAG_H) a -= 6u;
-            if (cpu->AF_reg.bytes.f & FLAG_C) a -= 0x60u;
+            if (cpu->AF_reg.bytes.f & FLAG_H) correction |= 0x06u;
+            if (old_carry) correction |= 0x60u;
+            a = (uint8_t)(a - correction);
         }
         cpu->AF_reg.bytes.a = a;
-        cpu->AF_reg.bytes.f &= ~(FLAG_H);
-        if (a == 0u) cpu->AF_reg.bytes.f |= FLAG_Z;
+        cpu->AF_reg.bytes.f &= (uint8_t)(FLAG_N | FLAG_C);
+        if (!(cpu->AF_reg.bytes.f & FLAG_N) &&
+            (correction & 0x60u) != 0u) {
+            cpu->AF_reg.bytes.f |= FLAG_C;
+        }
+        cpu->AF_reg.bytes.f |= a == 0u ? FLAG_Z : 0u;
+        cpu->AF_reg.bytes.f &= (uint8_t)~FLAG_H;
         break;
     }
     case 0x2f: cpu->AF_reg.bytes.a ^= 0xFFu; cpu->AF_reg.bytes.f |= FLAG_N | FLAG_H; break;
     case 0x37: cpu->AF_reg.bytes.f = (uint8_t)((cpu->AF_reg.bytes.f & (FLAG_Z | FLAG_C)) | FLAG_C); break;
     case 0x3f: cpu->AF_reg.bytes.f ^= FLAG_C; cpu->AF_reg.bytes.f &= ~(FLAG_N | FLAG_H); break;
-    case 0x76: cpu->halted = true; break;
+    case 0x76:
+        if (mmu != NULL && !cpu->ime &&
+            (mmu->memory[0xFFFFu] & mmu->memory[0xFF0Fu]) != 0u) {
+            cpu->halt_bug = true;
+        } else {
+            cpu->halted = true;
+        }
+        break;
     case 0x10:
         cpu->stopped = true;
         cpu->pc++;
@@ -815,6 +839,15 @@ bool cpu_execute_opcode(CPU *cpu, MMU *mmu, uint8_t opcode)
 
 bool cpu_step(CPU *cpu, MMU *mmu)
 {
+    if (cpu != NULL && cpu->halted) {
+        cpu->cycles += 4u;
+        return true;
+    }
+    if (cpu != NULL && cpu->halt_bug) {
+        uint8_t opcode = mmu_read_byte(mmu, cpu->pc);
+        cpu->halt_bug = false;
+        return cpu_execute_opcode(cpu, mmu, opcode);
+    }
     uint8_t opcode = mmu_read_byte(mmu, cpu->pc++);
     return cpu_execute_opcode(cpu, mmu, opcode);
 }

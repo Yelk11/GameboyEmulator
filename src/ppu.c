@@ -69,7 +69,7 @@ static uint8_t background_tile_pixel(PPU *ppu, uint16_t map_addr,
     if ((ppu->mmu->memory[0xFF40u] & 0x10u) != 0u) {
         data_addr = (uint16_t)(0x8000u + (uint16_t)tile * 16u);
     } else {
-        data_addr = (uint16_t)(0x9000u + (int16_t)((int8_t)tile) * 16);
+        data_addr = (uint16_t)(0x8800u + (int16_t)((int8_t)tile) * 16);
     }
     low = mmu_read_byte(ppu->mmu, (uint16_t)(data_addr + row * 2u));
     high = mmu_read_byte(ppu->mmu, (uint16_t)(data_addr + row * 2u + 1u));
@@ -123,7 +123,7 @@ static void ppu_render_line(PPU *ppu)
             if ((lcdc & 0x10u) != 0u) {
                 tile_addr = (uint16_t)(0x8000u + tile * 16u);
             } else {
-                tile_addr = (uint16_t)(0x9000u + (int16_t)((int8_t)tile) * 16);
+                tile_addr = (uint16_t)(0x8800u + (int16_t)((int8_t)tile) * 16);
             }
             uint8_t bank = (attr & 0x08u) != 0u ? 1u : 0u;
             uint8_t low = ppu->mmu->vram[bank][tile_addr - 0x8000u + row * 2u];
@@ -137,7 +137,8 @@ static void ppu_render_line(PPU *ppu)
             continue;
         }
 
-        if ((lcdc & 0x20u) != 0u && ly >= wy && x + 7u >= wx) {
+        if ((lcdc & 0x20u) != 0u && ly >= wy &&
+            (wx <= 7u || x >= (uint8_t)(wx - 7u))) {
             uint8_t window_x = (uint8_t)(x - (wx > 7u ? wx - 7u : 0u));
             uint16_t window_map = (lcdc & 0x40u) != 0u ? 0x9C00u : 0x9800u;
             color = background_tile_pixel(ppu, window_map,

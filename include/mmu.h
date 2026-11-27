@@ -62,6 +62,8 @@ typedef struct {
     uint8_t hdma_destination[2];
     uint8_t hdma_remaining;
     bool hdma_active;
+    char serial_output[4096];
+    size_t serial_output_length;
 } MMU;
 
 MMU *mmu_init(void);

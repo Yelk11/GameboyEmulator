@@ -70,3 +70,30 @@ make debugger ROM=path/to/game.gb
 
 Commands include `step`, `frame`, `run`, `breakpoint XXXX`, `cpu`,
 `ppu`, `mem XXXX`, `trace`, and `quit`.
+
+## retrio Game Boy test ROM suite
+
+The `vendor/gb-test-roms` submodule contains the retrio GB test ROM collection.
+Initialize it after cloning:
+
+```sh
+git submodule update --init --recursive
+```
+
+List every available `.gb` ROM:
+
+```sh
+make rom-list
+```
+
+Run one ROM:
+
+```sh
+make rom-test ROM=vendor/gb-test-roms/cpu_instrs/individual/01-special.gb FRAMES=7200
+```
+
+Run the main CPU, timing, interrupt, halt, and OAM suites:
+
+```sh
+make rom-test-suite
+```

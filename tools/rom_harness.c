@@ -87,6 +87,58 @@ int main(int argc, char **argv)
             if (strlen(serial_output) > 0u) {
                 fprintf(stderr, "Serial: %s\n", serial_output);
             }
+            fprintf(stderr,
+                    "Frame=%u T=%llu PC=%04X LCDC=%02X LY=%02X ROMB=%04X RAMB=%02X\n",
+                    frame, (unsigned long long)gb.total_t_cycles,
+                    gb.cpu->pc, gb.mmu->memory[0xFF40u],
+                    gb.ppu->ly, gb.mmu->cartridge.rom_bank,
+                    gb.mmu->cartridge.ram_bank);
+            fprintf(stderr,
+                    "TIMA=%02X TMA=%02X TAC=%02X IF=%02X IE=%02X HALT=%u\n",
+                    gb.mmu->memory[0xFF05u], gb.mmu->memory[0xFF06u],
+                    gb.mmu->memory[0xFF07u], gb.mmu->memory[0xFF0Fu],
+                    gb.mmu->memory[0xFFFFu], gb.cpu->halted ? 1u : 0u);
+            if ((frame % 100u) == 0u) {
+                unsigned nonzero_map = 0u;
+                unsigned nonzero_vram = 0u;
+                for (uint16_t addr = 0x9800u; addr < 0x9C00u; addr++) {
+                    if (gb.mmu->memory[addr] != 0u) nonzero_map++;
+                }
+                for (uint16_t addr = 0x8000u; addr < 0x9000u; addr++) {
+                    if (gb.mmu->memory[addr] != 0u) nonzero_vram++;
+                }
+                fprintf(stderr, "VRAM nonzero=%u tilemap nonzero=%u\n",
+                        nonzero_vram, nonzero_map);
+            }
+        }
+
+        if (gb.mmu->serial_output_length > 0u) {
+            int result = contains_result(gb.mmu->serial_output);
+            if (result != 0) {
+                char output[4096];
+                strncpy(output, gb.mmu->serial_output,
+                        sizeof(output) - 1u);
+                output[sizeof(output) - 1u] = '\0';
+                gb_destroy(&gb);
+                printf("%s: %s\n", result > 0 ? "PASS" : "FAIL",
+                       output);
+                return result > 0 ? 0 : 1;
+            }
+        }
+
+        if (frame == 599u) {
+            FILE *fp = fopen("build/frame.ppm", "wb");
+            if (fp != NULL) {
+                fprintf(fp, "P6\n160 144\n255\n");
+                for (uint32_t index = 0u;
+                     index < 160u * 144u; index++) {
+                    uint32_t pixel = gb.ppu->framebuffer[index];
+                    fputc((int)((pixel >> 16) & 0xFFu), fp);
+                    fputc((int)((pixel >> 8) & 0xFFu), fp);
+                    fputc((int)(pixel & 0xFFu), fp);
+                }
+                fclose(fp);
+            }
         }
     }
 

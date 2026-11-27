@@ -21,7 +21,7 @@ else
 MKDIR_P = mkdir -p "$(BUILD_DIR)"
 endif
 
-.PHONY: all app test clean test-sanitized rom-test debugger
+.PHONY: all app test clean test-sanitized rom-test rom-list rom-test-suite debugger
 
 all: app
 
@@ -36,6 +36,34 @@ test-sanitized: $(TEST_BINARY)
 
 rom-test: $(ROM_HARNESS_BINARY)
 	./$(ROM_HARNESS_BINARY) "$(ROM)" $(FRAMES)
+
+rom-list:
+	find vendor/gb-test-roms -type f -name '*.gb' | sort
+
+rom-test-suite: $(ROM_HARNESS_BINARY)
+	@status=0; \
+	for rom in \
+		vendor/gb-test-roms/cpu_instrs/cpu_instrs.gb \
+		vendor/gb-test-roms/instr_timing/instr_timing.gb \
+		vendor/gb-test-roms/mem_timing/mem_timing.gb \
+		vendor/gb-test-roms/mem_timing-2/mem_timing.gb \
+		vendor/gb-test-roms/interrupt_time/interrupt_time.gb \
+		vendor/gb-test-roms/halt_bug.gb \
+		vendor/gb-test-roms/oam_bug/oam_bug.gb; do \
+		echo "Running $$rom"; \
+		./$(ROM_HARNESS_BINARY) "$$rom" $(if $(FRAMES),$(FRAMES),7200) >/tmp/gb_suite.out 2>&1 || rc=$$?; \
+		rc=$${rc:-0}; echo "Exit=$$rc"; tail -n 5 /tmp/gb_suite.out; \
+		if [ $$rc -ne 0 ]; then status=1; fi; rc=; \
+	done; exit $$status
+
+rom-test-cpu-individual: $(ROM_HARNESS_BINARY)
+	@status=0; \
+	for rom in vendor/gb-test-roms/cpu_instrs/individual/*.gb; do \
+		echo "Running $$rom"; \
+		./$(ROM_HARNESS_BINARY) "$$rom" $(if $(FRAMES),$(FRAMES),720) >/tmp/gb_rom.out 2>&1 || rc=$$?; \
+		rc=$${rc:-0}; echo "Exit=$$rc"; tail -n 4 /tmp/gb_rom.out; \
+		if [ $$rc -ne 0 ]; then status=1; fi; rc=; \
+	done; exit $$status
 
 debugger: $(DEBUGGER_BINARY)
 	./$(DEBUGGER_BINARY) "$(ROM)"

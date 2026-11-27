@@ -12,6 +12,8 @@ MMU *mmu_init(void)
     mmu->action_buttons = 0x0Fu;
     mmu->dpad_buttons = 0x0Fu;
     mmu->wram_bank = 1u;
+    memset(mmu->serial_output, 0, sizeof(mmu->serial_output));
+    mmu->serial_output_length = 0u;
     return mmu;
 }
 
@@ -304,6 +306,14 @@ void mmu_write_byte(MMU *mmu, uint16_t addr, uint8_t val)
 {
     Cartridge *cart;
     if (mmu == NULL) return;
+    if (addr == 0xFF01u) {
+        mmu->memory[addr] = val;
+        if (mmu->serial_output_length + 1u < sizeof(mmu->serial_output)) {
+            mmu->serial_output[mmu->serial_output_length++] = (char)val;
+            mmu->serial_output[mmu->serial_output_length] = '\0';
+        }
+        return;
+    }
     if (addr >= 0xFF51u && addr <= 0xFF55u && mmu->cgb_mode) {
         mmu->memory[addr] = val;
         if (addr == 0xFF51u) mmu->hdma_source[0] = val;

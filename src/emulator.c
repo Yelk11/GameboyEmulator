@@ -138,6 +138,9 @@ uint32_t interrupt_step(GB *gb)
     gb->interrupt.ie = gb->mmu->memory[0xFFFFu];
     gb->interrupt.if_ = gb->mmu->memory[0xFF0Fu];
     pending = (uint8_t)(gb->interrupt.ie & gb->interrupt.if_);
+    if (pending != 0u && gb->cpu->halted) {
+        gb->cpu->halted = false;
+    }
     if (pending == 0u) return 0u;
 
     if ((pending & 0x01u) != 0u) { source = 0x01u; vector = 0x0040u; }

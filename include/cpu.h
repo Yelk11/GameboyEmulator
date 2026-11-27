@@ -50,6 +50,7 @@ typedef struct CPU {
     bool halted;
     bool stopped;
     bool branch_taken;
+    bool halt_bug;
 } CPU;
 
 typedef CPU reg;
