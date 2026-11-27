@@ -85,6 +85,8 @@ The project is complete when all of the following are true:
 
 ### Phase 2: Define the Emulator State and Clock Model
 
+**Status:** Complete
+
 **Goal:** Create one consistent machine-state model and timing unit.
 
 1. Replace the incomplete GB structure with a usable emulator context.

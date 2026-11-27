@@ -2,6 +2,21 @@
 
 #include <stdio.h>
 
+void cpu_init(CPU *cpu)
+{
+    if (cpu == NULL) {
+        return;
+    }
+
+    cpu->AF_reg.af = 0x01B0u;
+    cpu->BC_reg.bc = 0x0013u;
+    cpu->DE_reg.de = 0x00D8u;
+    cpu->HL_reg.hl = 0x014Du;
+    cpu->sp = 0xFFFEu;
+    cpu->pc = 0x0100u;
+    cpu->cycles = 0u;
+}
+
 typedef struct {
     const char *mnemonic;
     uint8_t length;
