@@ -29,3 +29,24 @@ Run AddressSanitizer and UndefinedBehaviorSanitizer checks with:
 ```sh
 make test-sanitized
 ```
+
+Run an external ROM validation harness:
+
+```sh
+make rom-test ROM=path/to/test.gb FRAMES=7200
+```
+
+The harness runs at most the requested number of frames (default: 7200),
+captures Blargg-style serial output, and reports pass, fail, hanging, or
+illegal-opcode results.
+
+## Controls
+
+| Game Boy button | Keyboard |
+| --- | --- |
+| D-pad | Arrow keys |
+| A | Z |
+| B | X |
+| Start | Enter |
+| Select | Left/Right Shift |
+| Exit | Escape |

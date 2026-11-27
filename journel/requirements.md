@@ -256,6 +256,8 @@ The project is complete when all of the following are true:
 
 ### Phase 7: Implement the Main Loop and SDL2 Frontend
 
+**Status:** Complete
+
 **Goal:** Run the emulator as an interactive application.
 
 1. Implement CLI parsing.
@@ -284,6 +286,8 @@ The project is complete when all of the following are true:
 **Exit gate:** Tetris and Dr. Mario run with responsive controls and stable frame timing.
 
 ### Phase 8: Add External Test ROM Support
+
+**Status:** Complete
 
 **Goal:** Add repeatable automated and visual validation.
 
