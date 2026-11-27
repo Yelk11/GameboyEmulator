@@ -60,6 +60,18 @@ typedef struct EmulatorOptions {
     bool paused;
 } EmulatorOptions;
 
+#define DEBUG_BREAKPOINT_MAX 16u
+
+typedef struct Debugger {
+    bool paused;
+    bool step_instruction;
+    bool step_frame;
+    bool opcode_trace;
+    bool memory_trace;
+    uint16_t breakpoints[DEBUG_BREAKPOINT_MAX];
+    uint8_t breakpoint_count;
+} Debugger;
+
 typedef struct GB {
     uint64_t total_t_cycles;
     uint64_t frame_number;
@@ -73,6 +85,7 @@ typedef struct GB {
     Serial serial;
     CartridgeInfo cartridge;
     EmulatorOptions options;
+    Debugger debugger;
 } GB;
 
 bool gb_init(GB *gb);
@@ -90,5 +103,12 @@ void dma_update(Dma *dma, MMU *mmu, uint32_t t_cycles);
 void serial_update(Serial *serial, uint32_t t_cycles);
 uint32_t interrupt_step(GB *gb);
 void joypad_press(Joypad *joypad, uint8_t button, bool pressed);
+void debugger_init(Debugger *debugger);
+bool debugger_add_breakpoint(Debugger *debugger, uint16_t address);
+bool debugger_should_break(const Debugger *debugger, uint16_t pc);
+void debugger_print_cpu(const GB *gb);
+void debugger_print_ppu(const GB *gb);
+void debugger_print_memory(const GB *gb, uint16_t address);
+void debugger_trace_opcode(const GB *gb);
 
 #endif

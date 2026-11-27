@@ -309,6 +309,8 @@ The project is complete when all of the following are true:
 
 ### Phase 9: Implement the Debugger
 
+**Status:** Complete
+
 **Goal:** Make CPU and timing bugs diagnosable.
 
 1. Add a text debugger interface.

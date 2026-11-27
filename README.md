@@ -50,3 +50,21 @@ illegal-opcode results.
 | Start | Enter |
 | Select | Left/Right Shift |
 | Exit | Escape |
+
+## Debugger shortcuts
+
+| Action | Keyboard |
+| --- | --- |
+| Pause/resume | F9 |
+| Step one instruction | F10 |
+| Step one frame | F11 |
+| Opcode trace | Enable through the debugger API or trace mode |
+
+Start the text debugger with:
+
+```sh
+make debugger ROM=path/to/game.gb
+```
+
+Commands include `step`, `frame`, `run`, `breakpoint XXXX`, `cpu`,
+`ppu`, `mem XXXX`, `trace`, and `quit`.

@@ -11,6 +11,7 @@ TEST_SOURCES := $(wildcard tests/*.c)
 APP_BINARY := $(BUILD_DIR)/gameboy
 TEST_BINARY := $(BUILD_DIR)/test_runner
 ROM_HARNESS_BINARY := $(BUILD_DIR)/rom_harness
+DEBUGGER_BINARY := $(BUILD_DIR)/debugger
 SDL_CFLAGS := $(shell sdl2-config --cflags 2>/dev/null)
 SDL_LIBS := $(shell sdl2-config --libs 2>/dev/null)
 
@@ -20,7 +21,7 @@ else
 MKDIR_P = mkdir -p "$(BUILD_DIR)"
 endif
 
-.PHONY: all app test clean test-sanitized rom-test
+.PHONY: all app test clean test-sanitized rom-test debugger
 
 all: app
 
@@ -36,6 +37,9 @@ test-sanitized: $(TEST_BINARY)
 rom-test: $(ROM_HARNESS_BINARY)
 	./$(ROM_HARNESS_BINARY) "$(ROM)" $(FRAMES)
 
+debugger: $(DEBUGGER_BINARY)
+	./$(DEBUGGER_BINARY) "$(ROM)"
+
 $(APP_BINARY): $(APP_SOURCES)
 	$(MKDIR_P)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(SDL_CFLAGS) $(APP_SOURCES) $(SDL_LIBS) -o $@
@@ -47,6 +51,10 @@ $(TEST_BINARY): $(TEST_SOURCES) $(PROJECT_SOURCES) $(UNITY_DIR)/unity.c $(UNITY_
 $(ROM_HARNESS_BINARY): tools/rom_harness.c $(PROJECT_SOURCES)
 	$(MKDIR_P)
 	$(CC) $(CPPFLAGS) $(CFLAGS) tools/rom_harness.c $(PROJECT_SOURCES) -o $@
+
+$(DEBUGGER_BINARY): tools/debugger.c $(PROJECT_SOURCES)
+	$(MKDIR_P)
+	$(CC) $(CPPFLAGS) $(CFLAGS) tools/debugger.c $(PROJECT_SOURCES) -o $@
 
 clean:
 ifeq ($(OS),Windows_NT)

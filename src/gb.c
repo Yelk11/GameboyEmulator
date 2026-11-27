@@ -25,10 +25,21 @@ static int run_frame(GB *gb)
 {
     uint32_t elapsed = 0u;
 
+    if (gb->debugger.paused &&
+        !gb->debugger.step_instruction &&
+        !gb->debugger.step_frame) {
+        return 0;
+    }
+
     while (elapsed < GB_T_CYCLES_PER_FRAME) {
         uint32_t before = gb->cpu->cycles;
         uint32_t interrupt_cycles = 0u;
 
+        if (debugger_should_break(&gb->debugger, gb->cpu->pc)) {
+            gb->debugger.paused = true;
+            return 0;
+        }
+        debugger_trace_opcode(gb);
         if (!cpu_step(gb->cpu, gb->mmu)) {
             return 1;
         }
@@ -43,6 +54,20 @@ static int run_frame(GB *gb)
                 gb_tick(gb, interrupt_cycles);
                 elapsed += interrupt_cycles;
             }
+        }
+
+        if (gb->debugger.step_instruction) {
+            gb->debugger.step_instruction = false;
+            gb->debugger.paused = true;
+            debugger_print_cpu(gb);
+            return 0;
+        }
+        if (gb->debugger.step_frame) {
+            gb->debugger.step_frame = false;
+            gb->debugger.paused = true;
+            debugger_print_ppu(gb);
+            gb->frame_number++;
+            return 0;
         }
     }
     gb->frame_number++;
@@ -120,6 +145,15 @@ int main(int argc, char **argv)
             } else if (event.type == SDL_KEYDOWN && event.key.repeat == 0) {
                 if (event.key.keysym.sym == SDLK_ESCAPE) {
                     running = false;
+                } else if (event.key.keysym.sym == SDLK_F9) {
+                    gb.debugger.paused = !gb.debugger.paused;
+                    if (gb.debugger.paused) debugger_print_cpu(&gb);
+                } else if (event.key.keysym.sym == SDLK_F10) {
+                    gb.debugger.paused = false;
+                    gb.debugger.step_instruction = true;
+                } else if (event.key.keysym.sym == SDLK_F11) {
+                    gb.debugger.paused = false;
+                    gb.debugger.step_frame = true;
                 } else {
                     apply_key(&gb.joypad, event.key.keysym.sym, true);
                 }

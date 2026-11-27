@@ -29,6 +29,8 @@ void test_phase6_background_tile(void);
 void test_phase6_vblank_interrupt(void);
 void test_phase6_lyc_stat(void);
 void test_phase6_window_and_sprite_registers(void);
+void test_phase9_breakpoints(void);
+void test_phase9_debugger_state(void);
 
 void setUp(void)
 {
@@ -70,5 +72,7 @@ int main(void)
     RUN_TEST(test_phase6_vblank_interrupt);
     RUN_TEST(test_phase6_lyc_stat);
     RUN_TEST(test_phase6_window_and_sprite_registers);
+    RUN_TEST(test_phase9_breakpoints);
+    RUN_TEST(test_phase9_debugger_state);
     return UNITY_END();
 }

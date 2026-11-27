@@ -181,6 +181,7 @@ void gb_reset(GB *gb)
     interrupt_init(&gb->interrupt);
     joypad_init(&gb->joypad);
     dma_init(&gb->dma);
+    debugger_init(&gb->debugger);
     gb->serial.sb = 0u;
     gb->serial.sc = 0u;
     gb->serial.transfer_counter = 0u;
