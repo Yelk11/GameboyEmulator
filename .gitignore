@@ -58,3 +58,4 @@ build/
 roms/
 test_roms/
 *.sav
+*.state[0-9]

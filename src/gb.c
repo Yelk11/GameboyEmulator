@@ -154,6 +154,18 @@ int main(int argc, char **argv)
                 } else if (event.key.keysym.sym == SDLK_F11) {
                     gb.debugger.paused = false;
                     gb.debugger.step_frame = true;
+                } else if (event.key.keysym.sym == SDLK_F5) {
+                    if (gb_save_state(&gb, 1u)) {
+                        fprintf(stdout, "Saved state slot 1\n");
+                    } else {
+                        fprintf(stderr, "Failed to save state slot 1\n");
+                    }
+                } else if (event.key.keysym.sym == SDLK_F6) {
+                    if (!gb_load_state(&gb, 1u)) {
+                        fprintf(stderr, "Failed to load state slot 1\n");
+                    } else {
+                        fprintf(stdout, "Loaded state slot 1\n");
+                    }
                 } else {
                     apply_key(&gb.joypad, event.key.keysym.sym, true);
                 }

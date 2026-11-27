@@ -103,6 +103,8 @@ void dma_update(Dma *dma, MMU *mmu, uint32_t t_cycles);
 void serial_update(Serial *serial, uint32_t t_cycles);
 uint32_t interrupt_step(GB *gb);
 void joypad_press(Joypad *joypad, uint8_t button, bool pressed);
+bool gb_save_state(GB *gb, uint8_t slot);
+bool gb_load_state(GB *gb, uint8_t slot);
 void debugger_init(Debugger *debugger);
 bool debugger_add_breakpoint(Debugger *debugger, uint16_t address);
 bool debugger_should_break(const Debugger *debugger, uint16_t pc);

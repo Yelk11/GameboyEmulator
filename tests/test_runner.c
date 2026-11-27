@@ -31,6 +31,8 @@ void test_phase6_lyc_stat(void);
 void test_phase6_window_and_sprite_registers(void);
 void test_phase9_breakpoints(void);
 void test_phase9_debugger_state(void);
+void test_phase10_save_and_load_state(void);
+void test_phase10_reject_wrong_rom(void);
 
 void setUp(void)
 {
@@ -74,5 +76,7 @@ int main(void)
     RUN_TEST(test_phase6_window_and_sprite_registers);
     RUN_TEST(test_phase9_breakpoints);
     RUN_TEST(test_phase9_debugger_state);
+    RUN_TEST(test_phase10_save_and_load_state);
+    RUN_TEST(test_phase10_reject_wrong_rom);
     return UNITY_END();
 }

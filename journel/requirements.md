@@ -340,6 +340,8 @@ The project is complete when all of the following are true:
 
 ### Phase 10: Implement Save States
 
+**Status:** Complete
+
 **Goal:** Save and restore the complete deterministic emulator state.
 
 1. Define a versioned binary save-state format.

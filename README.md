@@ -59,6 +59,8 @@ illegal-opcode results.
 | Step one instruction | F10 |
 | Step one frame | F11 |
 | Opcode trace | Enable through the debugger API or trace mode |
+| Save state slot 1 | F5 |
+| Load state slot 1 | F6 |
 
 Start the text debugger with:
 
