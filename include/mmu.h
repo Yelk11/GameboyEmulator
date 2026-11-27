@@ -23,6 +23,22 @@ typedef enum CartridgeType {
     CARTRIDGE_UNKNOWN
 } CartridgeType;
 
+#define SGB_PACKET_SIZE 16u
+#define SGB_PALETTE_COUNT 4u
+#define SGB_BORDER_WIDTH 256u
+#define SGB_BORDER_HEIGHT 224u
+
+typedef struct SGB {
+    bool enabled;
+    uint8_t packets[16];
+    uint8_t packet_bytes;
+    uint8_t packet_count;
+    uint8_t palettes[SGB_PALETTE_COUNT][4u][2u];
+    uint32_t border[SGB_BORDER_WIDTH * SGB_BORDER_HEIGHT];
+    uint8_t controller_count;
+    uint8_t controller_index;
+} SGB;
+
 typedef struct Cartridge {
     CartridgeType type;
     uint8_t *rom;
@@ -64,6 +80,7 @@ typedef struct {
     bool hdma_active;
     char serial_output[4096];
     size_t serial_output_length;
+    SGB sgb;
 } MMU;
 
 MMU *mmu_init(void);
@@ -74,6 +91,7 @@ bool mmu_save_battery(MMU *mmu);
 bool mmu_load_battery(MMU *mmu);
 const char *mmu_cartridge_type_name(const MMU *mmu);
 bool mmu_is_cgb(const MMU *mmu);
+bool mmu_is_sgb(const MMU *mmu);
 
 uint8_t mmu_read_byte(MMU *mmu, uint16_t addr);
 

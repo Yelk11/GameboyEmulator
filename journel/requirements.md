@@ -373,6 +373,8 @@ The project is complete when all of the following are true:
 
 ### Phase 12: Add SGB Compatibility
 
+**Status:** Complete
+
 **Goal:** Support the Super Game Boy peripheral protocol.
 
 1. Detect SGB-compatible cartridge metadata.

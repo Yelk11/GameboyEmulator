@@ -14,6 +14,7 @@ MMU *mmu_init(void)
     mmu->wram_bank = 1u;
     memset(mmu->serial_output, 0, sizeof(mmu->serial_output));
     mmu->serial_output_length = 0u;
+    memset(&mmu->sgb, 0, sizeof(mmu->sgb));
     return mmu;
 }
 
@@ -52,6 +53,8 @@ static CartridgeType cartridge_type(uint8_t code)
     if (code == 0x22) return CARTRIDGE_MBC7;
     return CARTRIDGE_UNKNOWN;
 }
+
+static void sgb_init_border(MMU *mmu);
 
 static void build_save_path(MMU *mmu, const char *rom_name)
 {
@@ -121,6 +124,8 @@ bool mmu_load_rom(MMU *mmu, const char *rom_name)
         cart->cgb_supported = cart->rom[0x143u] == 0x80u ||
                               cart->rom[0x143u] == 0xC0u;
         mmu->cgb_mode = cart->cgb_supported;
+        mmu->sgb.enabled = cart->rom[0x146u] == 0x03u;
+        if (mmu->sgb.enabled) sgb_init_border(mmu);
         if (cart->type == CARTRIDGE_MBC2) {
             cart->ram_size = 512u;
         } else if (cart->type == CARTRIDGE_MBC6) {
@@ -205,6 +210,11 @@ bool mmu_is_cgb(const MMU *mmu)
     return mmu != NULL && mmu->cgb_mode;
 }
 
+bool mmu_is_sgb(const MMU *mmu)
+{
+    return mmu != NULL && mmu->sgb.enabled;
+}
+
 static uint8_t cartridge_rom_read(const Cartridge *cart, uint16_t addr)
 {
     size_t index;
@@ -254,6 +264,90 @@ static void cartridge_ram_write(Cartridge *cart, uint16_t addr, uint8_t val)
     index = (size_t)cart->ram_bank * 0x2000u + (addr - 0xA000u);
     if (index >= cart->ram_size) return;
     cart->ram[index] = val;
+}
+
+static uint32_t sgb_color(uint16_t rgb)
+{
+    uint8_t r = (uint8_t)(((rgb >> 0u) & 31u) * 255u / 31u);
+    uint8_t g = (uint8_t)(((rgb >> 5u) & 31u) * 255u / 31u);
+    uint8_t b = (uint8_t)(((rgb >> 10u) & 31u) * 255u / 31u);
+    return 0xFF000000u | ((uint32_t)r << 16) |
+           ((uint32_t)g << 8) | b;
+}
+
+static void sgb_init_border(MMU *mmu)
+{
+    uint32_t index;
+    uint32_t border = sgb_color(0x18u);
+    uint32_t center = sgb_color(0x0000u);
+    uint32_t left = sgb_color(0x3FFu);
+
+    for (index = 0u; index < SGB_BORDER_WIDTH * SGB_BORDER_HEIGHT; index++) {
+        uint32_t x = index % SGB_BORDER_WIDTH;
+        uint32_t y = index / SGB_BORDER_WIDTH;
+        if (x >= 48u && x < 208u && y >= 40u && y < 184u) {
+            mmu->sgb.border[index] = center;
+        } else if (x < 16u || x >= 240u || y < 16u || y >= 208u) {
+            mmu->sgb.border[index] = left;
+        } else {
+            mmu->sgb.border[index] = border;
+        }
+    }
+}
+
+static void sgb_dispatch_packet(MMU *mmu)
+{
+    uint8_t command = (uint8_t)((mmu->sgb.packets[0] >> 3) & 0x1Fu);
+    uint8_t index;
+
+    mmu->sgb.packet_count++;
+    switch (command) {
+    case 0x00:
+    case 0x01:
+    case 0x02:
+    case 0x03: {
+        uint8_t target = (uint8_t)(command == 0u ? 0u :
+                                   command == 1u ? 1u :
+                                   command == 2u ? 2u : 3u);
+        for (index = 0u; index < 4u; index++) {
+            uint16_t offset = (uint16_t)(1u + index * 2u);
+            uint16_t rgb = (uint16_t)(mmu->sgb.packets[offset] |
+                                      ((uint16_t)mmu->sgb.packets[offset + 1u] << 8));
+            mmu->sgb.palettes[target][index][0] = (uint8_t)rgb;
+            mmu->sgb.palettes[target][index][1] = (uint8_t)(rgb >> 8);
+        }
+        sgb_init_border(mmu);
+        break;
+    }
+    case 0x0Au: {
+        for (index = 0u; index < 4u; index++) {
+            uint8_t palette_index = mmu->sgb.packets[1u + index];
+            if (palette_index >= SGB_PALETTE_COUNT) continue;
+            for (uint8_t color = 0u; color < 4u; color++) {
+                uint16_t rgb = (uint16_t)(mmu->sgb.palettes[palette_index][color][0] |
+                    ((uint16_t)mmu->sgb.palettes[palette_index][color][1] << 8));
+                (void)sgb_color(rgb);
+            }
+        }
+        sgb_init_border(mmu);
+        break;
+    }
+    case 0x11:
+        mmu->sgb.controller_count = (uint8_t)(
+            mmu->sgb.packets[1u] & 3u);
+        if (mmu->sgb.controller_count == 0u)
+            mmu->sgb.controller_count = 1u;
+        mmu->sgb.controller_index = 0u;
+        break;
+    case 0x17:
+        sgb_init_border(mmu);
+        break;
+    case 0x14:
+        sgb_init_border(mmu);
+        break;
+    default:
+        break;
+    }
 }
 
 uint8_t mmu_read_byte(MMU *mmu, uint16_t addr)
@@ -308,6 +402,13 @@ void mmu_write_byte(MMU *mmu, uint16_t addr, uint8_t val)
     if (mmu == NULL) return;
     if (addr == 0xFF01u) {
         mmu->memory[addr] = val;
+        if (mmu->sgb.enabled) {
+            mmu->sgb.packets[mmu->sgb.packet_bytes++] = val;
+            if (mmu->sgb.packet_bytes >= SGB_PACKET_SIZE) {
+                sgb_dispatch_packet(mmu);
+                mmu->sgb.packet_bytes = 0u;
+            }
+        }
         if (mmu->serial_output_length + 1u < sizeof(mmu->serial_output)) {
             mmu->serial_output[mmu->serial_output_length++] = (char)val;
             mmu->serial_output[mmu->serial_output_length] = '\0';

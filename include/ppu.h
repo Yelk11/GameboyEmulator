@@ -18,11 +18,13 @@ typedef struct PPU {
     uint16_t line_dot;
     uint32_t frame_cycle;
     uint32_t framebuffer[160u * 144u];
+    uint32_t sgb_framebuffer[256u * 224u];
     MMU *mmu;
 } PPU;
 
 void ppu_init(PPU *ppu);
 void ppu_update(PPU *ppu, uint32_t t_cycles);
 void ppu_connect(PPU *ppu, MMU *mmu);
+void ppu_compose_sgb(PPU *ppu);
 
 #endif

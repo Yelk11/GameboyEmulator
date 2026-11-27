@@ -37,6 +37,10 @@ void test_phase11_cgb_header_and_vram(void);
 void test_phase11_wram_and_palette(void);
 void test_phase11_speed_switch(void);
 void test_phase11_hdma_register(void);
+void test_phase12_sgb_header(void);
+void test_phase12_palette_packet(void);
+void test_phase12_controller_packet(void);
+void test_phase12_border_composition(void);
 
 void setUp(void)
 {
@@ -86,5 +90,9 @@ int main(void)
     RUN_TEST(test_phase11_wram_and_palette);
     RUN_TEST(test_phase11_speed_switch);
     RUN_TEST(test_phase11_hdma_register);
+    RUN_TEST(test_phase12_sgb_header);
+    RUN_TEST(test_phase12_palette_packet);
+    RUN_TEST(test_phase12_controller_packet);
+    RUN_TEST(test_phase12_border_composition);
     return UNITY_END();
 }

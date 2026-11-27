@@ -14,6 +14,7 @@ void ppu_init(PPU *ppu)
     ppu->frame_cycle = 0u;
     ppu->mmu = NULL;
     memset(ppu->framebuffer, 0, sizeof(ppu->framebuffer));
+    memset(ppu->sgb_framebuffer, 0, sizeof(ppu->sgb_framebuffer));
 }
 
 void ppu_connect(PPU *ppu, MMU *mmu)
@@ -101,6 +102,7 @@ static void ppu_render_line(PPU *ppu)
         for (x = 0u; x < GB_FRAMEBUFFER_WIDTH; x++) {
             ppu->framebuffer[ly * GB_FRAMEBUFFER_WIDTH + x] = shade_rgb(3u);
         }
+
         return;
     }
 
@@ -209,6 +211,28 @@ static void ppu_render_line(PPU *ppu)
     }
 }
 
+void ppu_compose_sgb(PPU *ppu)
+{
+    uint32_t y;
+    uint32_t x;
+    if (ppu == NULL || ppu->mmu == NULL ||
+        !ppu->mmu->sgb.enabled) return;
+
+    for (y = 0u; y < SGB_BORDER_HEIGHT; y++) {
+        for (x = 0u; x < SGB_BORDER_WIDTH; x++) {
+            ppu->sgb_framebuffer[y * SGB_BORDER_WIDTH + x] =
+                ppu->mmu->sgb.border[y * SGB_BORDER_WIDTH + x];
+        }
+    }
+    for (y = 0u; y < GB_FRAMEBUFFER_HEIGHT; y++) {
+        for (x = 0u; x < GB_FRAMEBUFFER_WIDTH; x++) {
+            ppu->sgb_framebuffer[(y + 40u) * SGB_BORDER_WIDTH +
+                                 (x + 48u)] =
+                ppu->framebuffer[y * GB_FRAMEBUFFER_WIDTH + x];
+        }
+    }
+}
+
 void ppu_update(PPU *ppu, uint32_t t_cycles)
 {
     uint32_t remaining;
@@ -231,7 +255,10 @@ void ppu_update(PPU *ppu, uint32_t t_cycles)
         remaining -= step;
 
         if (ppu->line_dot == GB_T_CYCLES_PER_SCANLINE) {
-            if (ppu->ly < 144u) ppu_render_line(ppu);
+            if (ppu->ly < 144u) {
+                ppu_render_line(ppu);
+                ppu_compose_sgb(ppu);
+            }
             ppu->line_dot = 0u;
             ppu->ly = (uint8_t)((ppu->ly + 1u) % GB_SCANLINE_COUNT);
             if (ppu->mmu != NULL) ppu->mmu->memory[0xFF44u] = ppu->ly;

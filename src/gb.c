@@ -82,6 +82,8 @@ int main(int argc, char **argv)
     SDL_Texture *texture = NULL;
     bool running = true;
     uint64_t frame_start;
+    int render_width;
+    int render_height;
 
     if (argc != 2) {
         fprintf(stderr, "Usage: %s ROM_FILE\n", argv[0]);
@@ -98,10 +100,27 @@ int main(int argc, char **argv)
         return 1;
     }
 
+    {
+        uint32_t width = mmu_is_sgb(gb.mmu) ?
+                         SGB_BORDER_WIDTH : GB_FRAMEBUFFER_WIDTH;
+        uint32_t height = mmu_is_sgb(gb.mmu) ?
+                          SGB_BORDER_HEIGHT : GB_FRAMEBUFFER_HEIGHT;
+        (void)width;
+        (void)height;
+    }
+
     gb.cartridge.loaded = true;
     gb.cartridge.rom_name = malloc(strlen(argv[1]) + 1u);
     if (gb.cartridge.rom_name != NULL) {
         strcpy(gb.cartridge.rom_name, argv[1]);
+    }
+
+    if (mmu_is_sgb(gb.mmu)) {
+        render_width = (int)SGB_BORDER_WIDTH;
+        render_height = (int)SGB_BORDER_HEIGHT;
+    } else {
+        render_width = (int)GB_FRAMEBUFFER_WIDTH;
+        render_height = (int)GB_FRAMEBUFFER_HEIGHT;
     }
 
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
@@ -113,7 +132,7 @@ int main(int argc, char **argv)
     window = SDL_CreateWindow("Game Boy Emulator",
                               SDL_WINDOWPOS_CENTERED,
                               SDL_WINDOWPOS_CENTERED,
-                              640, 576,
+                              render_width * 4, render_height * 4,
                               SDL_WINDOW_RESIZABLE);
     renderer = window != NULL ? SDL_CreateRenderer(window, -1,
                                                    SDL_RENDERER_ACCELERATED |
@@ -121,7 +140,7 @@ int main(int argc, char **argv)
     texture = renderer != NULL ?
               SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888,
                                 SDL_TEXTUREACCESS_STREAMING,
-                                GB_FRAMEBUFFER_WIDTH, GB_FRAMEBUFFER_HEIGHT) : NULL;
+                                render_width, render_height) : NULL;
 
     if (window == NULL || renderer == NULL || texture == NULL) {
         fprintf(stderr, "SDL display initialization failed: %s\n", SDL_GetError());
@@ -180,8 +199,13 @@ int main(int argc, char **argv)
             break;
         }
 
-        SDL_UpdateTexture(texture, NULL, gb.ppu->framebuffer,
-                          GB_FRAMEBUFFER_WIDTH * sizeof(uint32_t));
+        if (mmu_is_sgb(gb.mmu)) {
+            SDL_UpdateTexture(texture, NULL, gb.ppu->sgb_framebuffer,
+                              SGB_BORDER_WIDTH * sizeof(uint32_t));
+        } else {
+            SDL_UpdateTexture(texture, NULL, gb.ppu->framebuffer,
+                              GB_FRAMEBUFFER_WIDTH * sizeof(uint32_t));
+        }
         SDL_RenderClear(renderer);
         SDL_RenderCopy(renderer, texture, NULL, NULL);
         SDL_RenderPresent(renderer);
